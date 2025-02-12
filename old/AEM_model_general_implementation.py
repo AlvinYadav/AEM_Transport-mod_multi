@@ -48,7 +48,7 @@ def uv(x, y, d):
 
 #%%
 def Mathieu(order, psi, eta, q):
-    m = mf.mathieu(q)
+    m = mf.Mathieu(q)
     Se = m.ce(order, psi).real
     So = m.se(order, psi).real
     Ye = m.Ke(order, eta).real
