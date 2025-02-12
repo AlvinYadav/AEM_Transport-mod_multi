@@ -49,7 +49,7 @@ npvn = [int(x) for x in np.__version__.split('.')[0:2]]
 if npvn[0] == 1 and npvn[1] < 3:
     raise ImportError #, 'Mathieu funciton library requires numpy version 1.3 or greater'
 
-class mathieu(object):
+class Mathieu(object):
     """Class containing all things related to modified Mathieu functions
     (i.e.,  Mathieu functions of complex Mathieu parameter, -q).
 
