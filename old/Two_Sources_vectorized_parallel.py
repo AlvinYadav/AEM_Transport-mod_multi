@@ -32,7 +32,7 @@ n = 7            #Number of terms in mathieu series
 M = 100           #Number of Control Points, 5x overspecification
 
 #Mathieu Functions
-m = mf.mathieu(q)
+m = mf.Mathieu(q)
 
 #Real Mathieu Functions
 def Se(order, psi):                    #even angular first kind
@@ -51,6 +51,7 @@ def uv(x, y):
     p = (-B+np.sqrt(B**2+4*d**2*x**2))/(2*d**2)
     q = (-B-np.sqrt(B**2+4*d**2*x**2))/(2*d**2)
 
+    psi = np.nan
     psi_0 = np.arcsin(np.sqrt(p))
     if Y >= 0 and x >= 0:
         psi = psi_0
@@ -61,7 +62,7 @@ def uv(x, y):
     if Y > 0 and x < 0:
         psi = 2*np.pi-psi_0
     eta = 0.5*np.log(1-2*q+2*np.sqrt(q**2-q))
-    return eta, psi
+    return (eta, psi)
 
 #polar coordinates
 phi = np.linspace(0, 2*np.pi, M)
@@ -87,11 +88,11 @@ eta3 = uv_vec(x3, y3)[0]
 
 #%%
 #general target function:
-def F_target(x, Ci):
+def F_target(x, Ci) -> tuple[float, str]:
     if Ci > 0:
-        return (Ci*gamma+Ca)*np.exp(-beta*x), (Ci), 'r'
-    if Ci <= 0:
-        return (Ci)*np.exp(-beta*x), (Ci), 'b'
+        return (Ci*gamma+Ca)*np.exp(-beta*x), 'r'
+    else:
+        return (Ci)*np.exp(-beta*x), 'b'
 
 #System of Equations to calculate coefficients
 #"perspective" source 1
@@ -141,8 +142,8 @@ F = []                                  #target function vector
 
 for u in range(0, M):
     F.append(F_target(x1[u], C0)[0])
-for v in range(0, M):
-    F.append(F_target(x3[v], C1)[0])
+for u in range(0, M):
+    F.append(F_target(x3[u], C1)[0])
 
 Coeff = np.linalg.lstsq(F_M, F, rcond=None)
 print(Coeff[0])
@@ -150,9 +151,9 @@ print(Coeff[0])
 #%%
 def c(x, y):
     if (x**2+y**2)<=r**2:
-        return F_target(x1[u], C0)[1]
+        return C0
     if ((x-D1)**2+(y-D2)**2)<=r**2:
-        return F_target(x3[v], C1)[1]
+        return C1
 
     psi = uv(x, y)[1]
     eta = uv(x, y)[0]
