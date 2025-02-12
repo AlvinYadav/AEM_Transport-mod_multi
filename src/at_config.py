@@ -12,9 +12,9 @@ class ATConfiguration:
         self.alpha_t: float = 1.0
         self.beta: float = 1.0 / (2.0 * self.alpha_l)
         self.gamma: float = 3.5
-        self.Ca: float = 8.0
-        self.n: int = 7
-        self.M: int = 100
+        self.ca: float = 8.0
+        self.num_terms: int = 7 # Number of terms
+        self.num_cp: int = 100 # Number of controll points
         self.dom_xmin: float = 10.0
         self.dom_ymin: float = -5.0
         self.dom_xmax: float = 20.0
