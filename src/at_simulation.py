@@ -70,7 +70,6 @@ class ATSimulation:
             for j in range(0, num_xaxis):
                 result[j, i] = self.calc_c(xaxis[j], yaxis[i])
 
-
         return (xaxis, yaxis, result)
 
     def calc_c(self, x: float, y: float) -> float:
@@ -89,8 +88,8 @@ class ATSimulation:
                 factor += (self.coeff[i2 - 1] * f1) + (self.coeff[i2] * f2)
             threshold += factor * math.exp(self.config.beta * x)
 
-        ca = self.config.ca
-        diff = threshold - ca
+        ca: float = self.config.ca
+        diff: float = threshold - ca
         if threshold > ca:
             return diff / self.config.gamma
         else:
@@ -142,7 +141,7 @@ class ATSimulation:
 
     def solve_system(self):
         elements = self.config.elements
-        num_elems = len(elements)
+        num_elems: int = len(elements)
 
         perspective_vector = []
         target_function_vector = []
@@ -150,20 +149,20 @@ class ATSimulation:
         for e1 in range(0, num_elems):
             elem1 = elements[e1]
             elem1.m_list = []
-            x1 = elem1.x
-            y1 = elem1.y
+            x1: float = elem1.x
+            y1: float = elem1.y
             for e2 in range(0, num_elems):
                 elem2 = elements[e2]
-                x2 = elem2.x
-                y2 = elem2.y
-                d2 = elem2.d
-                q2 = elem2.q
+                x2: float = elem2.x
+                y2: float = elem2.y
+                d2: float = elem2.d
+                q2: float = elem2.q
                 for i in range(0, self.config.num_cp):
                     (x, y) = elem1.outline[i]
 
                     if e1 != e2:
-                        dist_x = x1 - x2
-                        dist_y = y1 - y2
+                        dist_x: float = x1 - x2
+                        dist_y: float = y1 - y2
                         x = x + dist_x
                         y = y + dist_y
 
