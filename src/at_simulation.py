@@ -173,8 +173,8 @@ class ATSimulation:
                         elem1.m_list.append(f1)
                         elem1.m_list.append(f2)
 
-            m_list_len = len(elem1.m_list)
-            s = (num_elems * self.config.num_terms - 1) * num_elems
+            m_list_len: int = len(elem1.m_list)
+            s: int = (num_elems * self.config.num_terms - 1) * num_elems
             for i in range(0, m_list_len, s):
                 perspective_vector.append(elem1.m_list[i:i+s])
 
