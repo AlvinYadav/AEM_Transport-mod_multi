@@ -85,7 +85,8 @@ class ATSimulation:
             factor = self.coeff[0] * self.calc_mathieu1(0, psi, eta, elem.q)
             for i in range(1, self.config.num_terms):
                 (f1, f2) = self.calc_mathieu2(i, psi, eta, elem.q)
-                factor += (self.coeff[2*i - 1] * f1) + (self.coeff[2*i] * f2)
+                i2: int = i*2
+                factor += (self.coeff[i2 - 1] * f1) + (self.coeff[i2] * f2)
             threshold += factor * math.exp(self.config.beta * x)
 
         ca = self.config.ca
@@ -99,10 +100,14 @@ class ATSimulation:
         alpha_l: float = self.config.alpha_l
         alpha_t: float = self.config.alpha_t
 
+        x2: float = x**2.0
+        d2: float = d**2.0
         Y: float = math.sqrt(alpha_l / alpha_t) * y
-        B: float = x**2.0 + Y**2.0 - d**2.0
-        p: float = (-B + math.sqrt(B**2.0 + 4.0 * d**2.0 * x**2.0)) / (2.0 * d**2.0)
-        q: float = (-B - math.sqrt(B**2.0 + 4.0 * d**2.0 * x**2.0)) / (2.0 * d**2.0)
+        B: float = x2 + Y**2.0 - d2
+        f1: float = math.sqrt(B**2.0 + 4.0 * d2 * x2)
+        f2: float = 2.0 * d2
+        p: float = (-B + f1) / f2
+        q: float = (-B - f1) / f2
 
         psi: float = math.nan
         psi_0: float = math.asin(math.sqrt(p))
