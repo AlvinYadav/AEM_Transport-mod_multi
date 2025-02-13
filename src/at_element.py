@@ -72,7 +72,7 @@ class ATECircle(ATElement):
         f1: float = self.c * gamma + ca if self.c > 0.0 else self.c
 
         for (x, _) in self.outline:
-            f2: float = math.exp(-beta * x)
+            f2: float = math.exp(-beta * (x + self.x))
             self.target.append(f1 * f2)
 
     def is_inside(self, x, y) -> bool:
