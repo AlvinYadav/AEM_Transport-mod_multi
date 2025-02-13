@@ -78,9 +78,22 @@ class ATSimulation:
             if elem.is_inside(x, y):
                 return elem.c_inside()
 
+        threshold: float = 0.0
+        factor: float = 0.0
+        for elem in self.config.elements:
+            (eta, psi) = self.calc_uv(x - elem.x, y - elem.y, elem.d)
+            factor = self.coeff[0] * self.calc_mathieu1(0, psi, eta, elem.q)
+            for i in range(1, self.config.num_terms):
+                (f1, f2) = self.calc_mathieu2(i, psi, eta, elem.q)
+                factor += (self.coeff[2*i - 1] * f1) + (self.coeff[2*i] * f2)
+            threshold += factor * math.exp(self.config.beta * x)
 
-        # TODO: implement
-        return 0.0
+        ca = self.config.ca
+        diff = threshold - ca
+        if threshold > ca:
+            return diff / self.config.gamma
+        else:
+            return diff
 
     def calc_uv(self, x: float, y: float, d: float) -> tuple[float, float]:
         alpha_l: float = self.config.alpha_l
@@ -123,12 +136,11 @@ class ATSimulation:
         return (So * Yo, Se * Ye)
 
     def solve_system(self):
-        # TODO: calculate
-        ms_expansion = []
-        boundary_cond = []
-
         elements = self.config.elements
         num_elems = len(elements)
+
+        perspective_vector = []
+        target_function_vector = []
 
         for e1 in range(0, num_elems):
             elem1 = elements[e1]
@@ -137,10 +149,10 @@ class ATSimulation:
             y1 = elem1.y
             for e2 in range(0, num_elems):
                 elem2 = elements[e2]
-                d = elem2.d
-                q = elem2.q
                 x2 = elem2.x
                 y2 = elem2.y
+                d2 = elem2.d
+                q2 = elem2.q
                 for i in range(0, self.config.num_cp):
                     (x, y) = elem1.outline[i]
 
@@ -150,19 +162,21 @@ class ATSimulation:
                         x = x + dist_x
                         y = y + dist_y
 
-                    (eta, psi) = self.calc_uv(x, y, d)
-                    elem1.m_list.append(self.calc_mathieu1(0, psi, eta, q))
+                    (eta, psi) = self.calc_uv(x, y, d2)
+                    elem1.m_list.append(self.calc_mathieu1(0, psi, eta, q2))
                     for j in range(1, self.config.num_terms):
-                        (f1, f2) = self.calc_mathieu2(j, psi, eta, q)
+                        (f1, f2) = self.calc_mathieu2(j, psi, eta, q2)
                         elem1.m_list.append(f1)
                         elem1.m_list.append(f2)
 
-            elem1.f_list = []
+            m_list_len = len(elem1.m_list)
+            s = (num_elems * self.config.num_terms - 1) * num_elems
+            for i in range(0, m_list_len, s):
+                perspective_vector.append(elem1.m_list[i:i+s])
 
+            target_function_vector.extend(elem1.target)
 
         # Solve least squares
-        coeff = np.linalg.lstsq(ms_expansion, boundary_cond, rcond=None)
+        coeff = np.linalg.lstsq(perspective_vector, target_function_vector, rcond=None)
         self.coeff = coeff[0]
-
-
 
