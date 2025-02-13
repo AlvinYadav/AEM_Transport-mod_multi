@@ -44,6 +44,7 @@ class ATECircle(ATElement):
         self.outline = []
         self.target = []
         self.m_list = []
+        self.f_list = []
 
     def calc_d_q(self, alpha_t: float, alpha_l: float, beta: float):
         #d = np.sqrt((r * np.sqrt(alpha_l / alpha_t))**2 - r**2)
@@ -58,8 +59,8 @@ class ATECircle(ATElement):
 
         for i in range(0, num_cp):
             alpha = float(i) * step
-            x = self.x + (self.r * math.cos(alpha))
-            y = self.x + (self.r * math.sin(alpha))
+            x = self.r * math.cos(alpha)
+            y = self.r * math.sin(alpha)
             self.outline.append((x, y))
 
     def calc_target(self, ca: float, beta: float, gamma: float):
