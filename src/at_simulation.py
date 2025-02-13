@@ -133,21 +133,22 @@ class ATSimulation:
         for e1 in range(0, num_elems):
             elem1 = elements[e1]
             elem1.m_list = []
+            x1 = elem1.x
+            y1 = elem1.y
             for e2 in range(0, num_elems):
                 elem2 = elements[e2]
+                d = elem2.d
+                q = elem2.q
+                x2 = elem2.x
+                y2 = elem2.y
                 for i in range(0, self.config.num_cp):
-                    d = elem1.d
-                    q = elem1.q
+                    (x, y) = elem1.outline[i]
 
-                    if e1 == e2:
-                        (x, y) = elem1.outline[i]
-                    else:
-                        (x1, y1) = elem1.outline[i]
-                        (x2, y2) = elem2.outline[i]
-                        dist_x = abs(x1 - x2)
-                        dist_y = abs(y1 - y2)
-                        x = x1 - dist_x
-                        y = y1 - dist_y
+                    if e1 != e2:
+                        dist_x = x1 - x2
+                        dist_y = y1 - y2
+                        x = x + dist_x
+                        y = y + dist_y
 
                     (eta, psi) = self.calc_uv(x, y, d)
                     elem1.m_list.append(self.calc_mathieu1(0, psi, eta, q))
@@ -156,6 +157,7 @@ class ATSimulation:
                         elem1.m_list.append(f1)
                         elem1.m_list.append(f2)
 
+            elem1.f_list = []
 
 
         # Solve least squares
