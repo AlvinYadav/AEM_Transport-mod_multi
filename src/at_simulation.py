@@ -1,3 +1,6 @@
+# Written by Willi Kappler, willi.kappler@uni-tuebingen.de
+# Based on code from Anton Köhler
+
 
 # Python std library
 import timeit
@@ -7,6 +10,8 @@ import math
 
 # External imports
 import numpy as np
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 
 # Local imports
 import mathieu_functions_OG as mf
@@ -20,6 +25,9 @@ class ATSimulation:
     def __init__(self, config: at_config.ATConfiguration):
         self.config = config
         self.coeff = []
+        self.xaxis: np.ndarray = np.arange(0, 10, 1)
+        self.yaxis: np.ndarray = np.arange(0, 10, 1)
+        self.result: np.ndarray = np.zeros((10, 10))
 
     def run(self):
         start = timeit.default_timer()
@@ -48,7 +56,7 @@ class ATSimulation:
         ymax: float = self.config.dom_ymax
         inc: float = self.config.dom_inc
 
-        (xaxis, yaxis, values) = self.conc_array(xmin, ymin, xmax, ymax, inc)
+        self.conc_array(xmin, ymin, xmax, ymax, inc)
 
         stop = timeit.default_timer()
         sec = int(stop - start)
@@ -56,21 +64,28 @@ class ATSimulation:
         print(f"Computation time [hh:mm:ss]: {cpu_time}")
 
         # TODO: plot result
+        plt.figure(figsize=(16, 9), dpi = 300)
+        mpl.rcParams.update({"font.size": 22})
+        plt.axis("scaled")
+        plt.xlabel("$x$ (m)")
+        plt.ylabel("$y$ (m)")
+        Plume = plt.contourf(self.result[2], levels=10, cmap="coolwarm") #np.linspace(Ca, 43, 10)
+        Plume_max = plt.contour(self.result[2], levels=[0], linewidths=2, colors="k")
+        plt.tight_layout()
+        plt.savefig("plot_result.pdf")
+        plt.show()
 
-    def conc_array(self, xmin: float, ymin: float, xmax: float, ymax: float,
-            inc: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        xaxis: np.ndarray = np.arange(xmin, xmax, inc)
-        yaxis: np.ndarray = np.arange(ymin, ymax, inc)
-        num_xaxis: int = len(xaxis)
-        num_yaxis: int = len(yaxis)
+    def conc_array(self, xmin: float, ymin: float, xmax: float, ymax: float, inc: float):
+        self.xaxis = np.arange(xmin, xmax, inc)
+        self.yaxis = np.arange(ymin, ymax, inc)
+        num_xaxis: int = len(self.xaxis)
+        num_yaxis: int = len(self.yaxis)
 
-        result: np.ndarray = np.zeros((num_xaxis, num_yaxis))
+        self.result = np.zeros((num_xaxis, num_yaxis))
 
         for i in range(0, num_yaxis):
             for j in range(0, num_xaxis):
-                result[j, i] = self.calc_c(xaxis[j], yaxis[i])
-
-        return (xaxis, yaxis, result)
+                self.result[j, i] = self.calc_c(self.xaxis[j], self.yaxis[i])
 
     def calc_c(self, x: float, y: float) -> float:
         for elem in self.config.elements:
@@ -181,6 +196,8 @@ class ATSimulation:
             target_function_vector.extend(elem1.target)
 
         # Solve least squares
-        coeff = np.linalg.lstsq(perspective_vector, target_function_vector, rcond=None)
+        print(f"{perspective_vector=}")
+        print(f"{target_function_vector=}")
+        coeff = np.linalg.lstsq(np.array(perspective_vector), target_function_vector, rcond=None)
         self.coeff = coeff[0]
 
