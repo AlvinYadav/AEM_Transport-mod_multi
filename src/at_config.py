@@ -1,3 +1,6 @@
+# Written by Willi Kappler, willi.kappler@uni-tuebingen.de
+# Based on code from Anton Köhler
+
 # Python std library
 import json
 import logging
@@ -49,6 +52,34 @@ class ATConfiguration:
 
         if "gamma" in data:
             config.gamma = data["gamma"]
+
+        if "ca" in data:
+            config.ca = data["ca"]
+
+        if "num_terms" in data:
+            config.num_terms = data["num_terms"]
+
+        if "num_cp" in data:
+            config.num_cp = data["num_cp"]
+
+        if "dom_xmin" in data:
+            config.dom_xmin = data["dom_xmin"]
+
+        if "dom_ymin" in data:
+            config.dom_ymin = data["dom_ymin"]
+
+        if "dom_xmax" in data:
+            config.dom_xmax = data["dom_xmax"]
+
+        if "dom_ymax" in data:
+            config.dom_ymax = data["dom_ymax"]
+
+        if "dom_inc" in data:
+            config.dom_inc = data["dom_inc"]
+
+        if "elements" in data:
+            for el in data["elements"]:
+                pass
 
         # TODO: Add more config options
 
