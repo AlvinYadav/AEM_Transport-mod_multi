@@ -21,10 +21,10 @@ class ATConfiguration:
         self.ca: float = 8.0
         self.num_terms: int = 7 # Number of terms
         self.num_cp: int = 100 # Number of controll points
-        self.dom_xmin: float = 10.0
-        self.dom_ymin: float = -5.0
-        self.dom_xmax: float = 20.0
-        self.dom_ymax: float = 6.0
+        self.dom_xmin: float = 0.0
+        self.dom_ymin: float = -20.0
+        self.dom_xmax: float = 150.0
+        self.dom_ymax: float = 30.0
         self.dom_inc: float = 1.0
         self.elements = []
 
@@ -44,42 +44,43 @@ class ATConfiguration:
 
         config = ATConfiguration()
 
-        match data:
-            case {"alpha_l": alpha_l}:
-                config.alpha_l = alpha_l
-            case {"alpha_t": alpha_t}:
-                config.alpha_t = alpha_t
-            case {"beta": beta}:
-                config.beta = beta
-            case {"gamma": gamma}:
-                config.gamma = gamma
-            case {"ca": ca}:
-                config.ca = ca
-            case {"num_terms": num_terms}:
-                config.num_terms = num_terms
-            case {"num_cp": num_cp}:
-                config.num_cp = num_cp
-            case {"dom_xmin": dom_xmin}:
-                config.dom_xmin = dom_xmin
-            case {"dom_ymin": dom_ymin}:
-                config.dom_ymin = dom_ymin
-            case {"dom_xmax": dom_xmax}:
-                config.dom_xmax = dom_xmax
-            case {"dom_ymax": dom_ymax}:
-                config.dom_ymax = dom_ymax
-            case {"dom_inc": dom_inc}:
-                config.dom_inc = dom_inc
-            case {"elements": elements}:
-                for element in elements:
-                    match element:
-                        case {"circle": [{"x": x}, {"y": y}, {"r": r}, {"con": con}]}:
-                            print(f"{x=}, {y=}, {r=}, {con=}")
-                            new_circle = ATECircle(con, x, y, r)
-                            config.elements.append(new_circle)
-                        case {"line": [{"start": start}, {"end": end}]}:
-                            print(f"{start=}, {end=}")
-                        case _:
-                            raise ValueError(f"Unknown element: {element=}")
+        for key, value in data.items():
+            match key:
+                case "alpha_l":
+                    config.alpha_l = value
+                case "alpha_t":
+                    config.alpha_t = value
+                case "gamma":
+                    config.gamma = value
+                case "ca":
+                    config.ca = value
+                case "num_terms":
+                    config.num_terms = value
+                case "num_cp":
+                    config.num_cp = value
+                case "dom_xmin":
+                    config.dom_xmin = value
+                case "dom_ymin":
+                    config.dom_ymin = value
+                case "dom_xmax":
+                    config.dom_xmax = value
+                case "dom_ymax":
+                    config.dom_ymax = value
+                case "dom_inc":
+                    config.dom_inc = value
+                case "elements":
+                    for element in value:
+                        match element:
+                            case {"circle": {"x": x, "y": y, "r": r, "con": con}}:
+                                logger.debug(f"New circle: {x=}, {y=}, {r=}, {con=}")
+                                new_circle = ATECircle(con, x, y, r)
+                                config.elements.append(new_circle)
+                            case {"line": {"start": start, "end": end}}:
+                                logger.debug(f"New line: {start=}, {end=}")
+                            case _:
+                                raise ValueError(f"Unknown element: {element=}")
+        
+        config.beta = 1.0 / (2.0 * config.alpha_l)
 
         return config
 
