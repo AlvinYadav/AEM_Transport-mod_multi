@@ -6,6 +6,9 @@ import json
 import logging
 from typing import Any
 
+# Local imports:
+from at_element import ATECircle, ATELine
+
 logger = logging.getLogger(__name__)
 
 
@@ -41,47 +44,42 @@ class ATConfiguration:
 
         config = ATConfiguration()
 
-        if "alpha_l" in data:
-            config.alpha_l = data["alpha_l"]
-
-        if "alpha_t" in data:
-            config.alpha_t = data["alpha_t"]
-
-        if "beta" in data:
-            config.beta = data["beta"]
-
-        if "gamma" in data:
-            config.gamma = data["gamma"]
-
-        if "ca" in data:
-            config.ca = data["ca"]
-
-        if "num_terms" in data:
-            config.num_terms = data["num_terms"]
-
-        if "num_cp" in data:
-            config.num_cp = data["num_cp"]
-
-        if "dom_xmin" in data:
-            config.dom_xmin = data["dom_xmin"]
-
-        if "dom_ymin" in data:
-            config.dom_ymin = data["dom_ymin"]
-
-        if "dom_xmax" in data:
-            config.dom_xmax = data["dom_xmax"]
-
-        if "dom_ymax" in data:
-            config.dom_ymax = data["dom_ymax"]
-
-        if "dom_inc" in data:
-            config.dom_inc = data["dom_inc"]
-
-        if "elements" in data:
-            for el in data["elements"]:
-                pass
-
-        # TODO: Add more config options
+        match data:
+            case {"alpha_l": alpha_l}:
+                config.alpha_l = alpha_l
+            case {"alpha_t": alpha_t}:
+                config.alpha_t = alpha_t
+            case {"beta": beta}:
+                config.beta = beta
+            case {"gamma": gamma}:
+                config.gamma = gamma
+            case {"ca": ca}:
+                config.ca = ca
+            case {"num_terms": num_terms}:
+                config.num_terms = num_terms
+            case {"num_cp": num_cp}:
+                config.num_cp = num_cp
+            case {"dom_xmin": dom_xmin}:
+                config.dom_xmin = dom_xmin
+            case {"dom_ymin": dom_ymin}:
+                config.dom_ymin = dom_ymin
+            case {"dom_xmax": dom_xmax}:
+                config.dom_xmax = dom_xmax
+            case {"dom_ymax": dom_ymax}:
+                config.dom_ymax = dom_ymax
+            case {"dom_inc": dom_inc}:
+                config.dom_inc = dom_inc
+            case {"elements": elements}:
+                for element in elements:
+                    match element:
+                        case {"circle": [{"x": x}, {"y": y}, {"r": r}, {"con": con}]}:
+                            print(f"{x=}, {y=}, {r=}, {con=}")
+                            new_circle = ATECircle(con, x, y, r)
+                            config.elements.append(new_circle)
+                        case {"line": [{"start": start}, {"end": end}]}:
+                            print(f"{start=}, {end=}")
+                        case _:
+                            raise ValueError(f"Unknown element: {element=}")
 
         return config
 
