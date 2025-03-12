@@ -11,26 +11,30 @@ import math
 # External imports
 import numpy as np
 import matplotlib as mpl
+mpl.use("Agg")
 import matplotlib.pyplot as plt
 
 # Local imports
 import mathieu_functions_OG as mf
-import at_config
+from at_config import ATConfiguration
 from at_element import ATElementType
 
 logger = logging.getLogger(__name__)
 
 
 class ATSimulation:
-    def __init__(self, config: at_config.ATConfiguration):
-        self.config = config
-        self.coeff = []
+    def __init__(self, config: ATConfiguration):
+        self.config: ATConfiguration = config
+        self.coeff: np.ndarray = np.zeros((10, 10))
         self.xaxis: np.ndarray = np.arange(0, 10, 1)
         self.yaxis: np.ndarray = np.arange(0, 10, 1)
         self.result: np.ndarray = np.zeros((10, 10))
 
     def run(self):
-        start = timeit.default_timer()
+        if len(self.config.elements) == 0:
+            raise ValueError(f"At least one element must be defined.")
+
+        start: float = timeit.default_timer()
 
         alpha_t: float = self.config.alpha_t
         alpha_l: float = self.config.alpha_l
@@ -58,8 +62,8 @@ class ATSimulation:
 
         self.conc_array(xmin, ymin, xmax, ymax, inc)
 
-        stop = timeit.default_timer()
-        sec = int(stop - start)
+        stop: float = timeit.default_timer()
+        sec: int = int(stop - start)
         cpu_time = timedelta(seconds = sec)
         print(f"Computation time [hh:mm:ss]: {cpu_time}")
 
@@ -69,11 +73,11 @@ class ATSimulation:
         plt.axis("scaled")
         plt.xlabel("$x$ (m)")
         plt.ylabel("$y$ (m)")
-        Plume = plt.contourf(self.result[2], levels=10, cmap="coolwarm") #np.linspace(Ca, 43, 10)
-        Plume_max = plt.contour(self.result[2], levels=[0], linewidths=2, colors="k")
+        plt.axis((xmin, xmax, ymin, ymax))
+        Plume = plt.contourf(self.result, levels=10, cmap="coolwarm")
+        Plume_max = plt.contour(self.result, levels=[0], linewidths=2, colors="k")
         plt.tight_layout()
         plt.savefig("plot_result.pdf")
-        plt.show()
 
     def conc_array(self, xmin: float, ymin: float, xmax: float, ymax: float, inc: float):
         self.xaxis = np.arange(xmin, xmax, inc)
@@ -124,16 +128,28 @@ class ATSimulation:
         q: float = (-B - f1) / f2
 
         psi: float = math.nan
-        psi_0: float = math.asin(math.sqrt(p))
+        psi_0: float = np.clip(math.sqrt(p), -1.0, 1.0)
+        psi_0: float = math.asin(psi_0)
 
-        if Y >= 0.0 and x >= 0.0:
-            psi = psi_0
-        if Y < 0.0 and x >= 0.0:
-            psi = math.pi - psi_0
-        if Y <= 0.0 and x < 0.0:
-            psi = math.pi + psi_0
-        if Y > 0.0 and x < 0.0:
-            psi = 2.0 * math.pi - psi_0
+        if Y >= 0.0:
+            if x >= 0.0:
+                psi = psi_0
+            else:
+                psi = 2.0 * math.pi - psi_0
+        else:
+            if x >= 0.0:
+                psi = math.pi - psi_0
+            else:
+                psi = math.pi + psi_0
+
+        # if Y >= 0.0 and x >= 0.0:
+        #     psi = psi_0
+        # if Y < 0.0 and x >= 0.0:
+        #     psi = math.pi - psi_0
+        # if Y <= 0.0 and x < 0.0:
+        #     psi = math.pi + psi_0
+        # if Y > 0.0 and x < 0.0:
+        #     psi = 2.0 * math.pi - psi_0
 
         eta: float = 0.5 * math.log(1.0 - 2.0 * q + 2.0 * math.sqrt(q**2.0 - q))
         return (eta, psi)
@@ -148,18 +164,18 @@ class ATSimulation:
     def calc_mathieu2(self, order: int, psi: float, eta: float,
             q: float) -> tuple[np.ndarray, np.ndarray]:
         m = mf.Mathieu(q)
-        Se = m.ce(order, psi).real
-        So = m.se(order, psi).real
-        Ye = m.Ke(order, eta).real
-        Yo = m.Ko(order, eta).real
+        Se: np.ndarray = m.ce(order, psi).real
+        So: np.ndarray = m.se(order, psi).real
+        Ye: np.ndarray = m.Ke(order, eta).real
+        Yo: np.ndarray = m.Ko(order, eta).real
         return (So * Yo, Se * Ye)
 
     def solve_system(self):
         elements = self.config.elements
         num_elems: int = len(elements)
 
-        perspective_vector = []
-        target_function_vector = []
+        perspective_vector: list = []
+        target_function_vector: list = []
 
         for e1 in range(0, num_elems):
             elem1 = elements[e1]
@@ -196,8 +212,6 @@ class ATSimulation:
             target_function_vector.extend(elem1.target)
 
         # Solve least squares
-        print(f"{perspective_vector=}")
-        print(f"{target_function_vector=}")
         coeff = np.linalg.lstsq(np.array(perspective_vector), target_function_vector, rcond=None)
         self.coeff = coeff[0]
 
