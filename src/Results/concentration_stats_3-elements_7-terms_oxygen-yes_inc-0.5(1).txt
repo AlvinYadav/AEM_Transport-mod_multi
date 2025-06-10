@@ -1,0 +1,35 @@
+=== CONFIGURATION PARAMETERS ===
+Number of elements: 3
+Number of terms: 7
+Domain increment: 0.5
+Alpha_t: 0.2
+Alpha_l: 2.0
+Beta: 0.25
+Gamma: 3.5
+Ca: 8.0
+Number of control points: 100
+Domain: x[0.0, 400.0], y[-10.0, 20.0]
+
+=== ELEMENTS ===
+Element 1: x=0, y=0, r=1.0, c=10
+Element 2: x=30, y=5, r=1.0, c=-8
+Element 3: x=60, y=-5, r=1.0, c=10
+
+=== COMPUTATION INFO ===
+CPU Time [hh:mm:ss]: 0:03:38
+
+L_max: 399
+
+=== STATISTICS ===
+Min1 = 9.999999523 mg/l
+Max1 = 10.000000487 mg/l
+Mean1 = 9.999999991 mg/l
+Std1 = 2.84e-07 mg/l
+Min2 = -8.000003027 mg/l
+Max2 = -7.999996947 mg/l
+Mean2 = -7.999999986 mg/l
+Std2 = 1.877e-06 mg/l
+Min3 = 9.999859593 mg/l
+Max3 = 10.000139272 mg/l
+Mean3 = 9.999999591 mg/l
+Std3 = 7.9559e-05 mg/l

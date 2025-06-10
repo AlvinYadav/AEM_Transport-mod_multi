@@ -1,0 +1,31 @@
+{
+    "alpha_l": 2.0,
+    "alpha_t": 0.2,
+    "ca": 8.0,
+    "gamma": 3.5,
+    "dom_xmin": 0.0,
+    "dom_xmax": 300.0,
+    "dom_ymin": -10.0,
+    "dom_ymax": 20.0,
+    "dom_inc": 1.0,
+    "num_cp": 100,
+    "num_terms": 7,
+    "elements": [
+        {
+            "kind": "circle",
+            "x": 0,
+            "y": 0,
+            "c": 5,
+            "r": 1.0,
+            "id": "plume1"
+        },
+        {
+            "kind": "circle",
+            "x": 30,
+            "y": -5,
+            "c": 5,
+            "r": 2.0,
+            "id": "plume2"
+        }
+    ]
+}
