@@ -275,7 +275,6 @@ class ATSimulation:
         phi = np.linspace(0, 2 * pi, 360)
         stats = {}
 
-        # Print detailed statistics for each element like in the original file
         print("\n=== ELEMENT BOUNDARY STATISTICS ===")
         for idx, elem in enumerate(self.config.elements):
             x_test = elem.x + (r + 1e-9) * np.cos(phi)
