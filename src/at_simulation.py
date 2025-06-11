@@ -79,7 +79,7 @@ class ATSimulation:
                     dy = y_cp - e_j.y
                     eta, psi = e_j.uv(dx, dy, alpha_l, alpha_t)
                     row += self.build_row(e_j, eta, psi, n)
-                b.append(self.f_target(x_cp, e_i.c, ca, gamma, beta))
+                b.append(self.f_target(x_cp, e_i, ca, gamma, beta))
                 A.append(row)
 
         A = np.array(A)
@@ -93,11 +93,25 @@ class ATSimulation:
             row.append(elem.m.ce(j, psi).real * elem.m.Ke(j, eta).real)
         return row
 
-    def f_target(self, x, Ci, ca, gamma, beta):
-        if Ci > 0:
+    def f_target(self, x, elem, ca, gamma, beta):
+        Ci = elem.c
+        is_image = elem.id.lower().startswith("image")
+
+        # Donor
+        if Ci > 0 and not is_image:
             return (Ci * gamma + ca) * np.exp(-beta * x)
-        else:
+
+        # Acceptor
+        if Ci < 0 and not is_image:
             return (Ci + ca) * np.exp(-beta * x)
+
+        # Image‐donor (neg conc & image): negative of donor formula,
+        if Ci < 0 and is_image:
+            return -((abs(Ci) * gamma + ca) * np.exp(-beta * x))
+
+        # Image‐acceptor (pos conc & image): negative of acceptor
+        if Ci > 0 and is_image:
+            return -((Ci + ca) * np.exp(-beta * x))
 
     def calc_c(self, x, y):
         n = self.config.num_terms
@@ -135,6 +149,13 @@ class ATSimulation:
         for i, y in enumerate(self.yaxis):
             for j, x in enumerate(self.xaxis):
                 self.result[i, j] = self.calc_c(x, y)
+
+                for elem in self.config.elements:
+                    dx = x - elem.x
+                    dy = y - elem.y
+                    if dx * dx + dy * dy <= elem.r ** 2:
+                        self.result[i, j] = elem.c
+                        break
 
     def generate_filename_suffix(self):
         n_elements = len(self.config.elements)
@@ -231,7 +252,6 @@ class ATSimulation:
             print(warning_msg)
             warnings_issued.append("warning_msg")
 
-        #Summary
         if warnings_issued:
             print(f"\n*** CONCENTRATION RANGE SUMMARY ***")
             print(f"Expected range: [{min_expected:.3f}, {max_expected:.3f}] mg/l")
@@ -239,7 +259,7 @@ class ATSimulation:
             print(f"Element concentrations: {element_concentrations}")
             print(f"This may indicate numerical issues or insufficient domain resolution.\n")
         else:
-            print(f"✓ All concentration values within expected range [{min_expected:.3f}, {max_expected:.3f}] mg/l")
+            print(f"All concentration values within expected range [{min_expected:.3f}, {max_expected:.3f}] mg/l")
 
     def print_statistics(self, cpu_time):
         from math import cos, sin, pi
@@ -304,21 +324,68 @@ class ATSimulation:
     def plot_result(self):
         inc = self.config.dom_inc
 
+        max_val = np.max(self.result)
+        min_val = np.min(self.result)
+        abs_min = abs(min_val)
+
+        donor_levels = np.linspace(0, max_val, 11)
+        acceptor_levels = np.linspace(-abs_min, 0, 9)
+
         plt.figure(figsize=(16, 9), dpi=300)
         mpl.rcParams.update({"font.size": 22})
         plt.xlabel("$x$ (m)")
         plt.ylabel("$y$ (m)")
-        plt.xticks(range(0, len(self.xaxis), int(300 / inc)), self.xaxis[::int(300 / inc)].round(0))
-        plt.yticks(range(0, len(self.yaxis), int(20 / inc)), self.yaxis[::int(20 / inc)].round(0))
-        Plume = plt.contourf(self.result, levels=10, cmap='coolwarm')
-        Plume_max = plt.contour(self.result, levels=[0], linewidths=2, colors='k')
+        plt.xticks(
+            range(0, len(self.xaxis), int(100 / inc)),
+            self.xaxis[::int(100 / inc)].round(0)
+        )
+        plt.yticks(
+            range(0, len(self.yaxis), int(10 / inc)),
+            self.yaxis[::int(10 / inc)].round(0)
+        )
 
-        norm = mpl.colors.Normalize(vmin=Plume.cvalues.min(), vmax=Plume.cvalues.max())
-        sm = plt.cm.ScalarMappable(norm=norm, cmap=Plume.cmap)
-        sm.set_array([])
-        plt.colorbar(Plume, ticks=Plume.levels, label='Concentration [mg/l]', location='bottom', aspect=75)
+        donor = plt.contourf(
+            self.result,
+            levels=donor_levels,
+            cmap='Reds',
+            extend='max'
+        )
+        acceptor = plt.contourf(
+            self.result,
+            levels=acceptor_levels,
+            cmap='Blues_r',
+            extend='min'
+        )
+        Plume_max = plt.contour(
+            self.result,
+            levels=[0],
+            linewidths=2,
+            colors='k'
+        )
 
-        # verify L_max
+        plt.subplots_adjust(bottom=0.20)
+
+        cbar_donor = plt.colorbar(
+            donor,
+            ticks=donor_levels,
+            label='Electron donor concentration [mg/l]',
+            location='bottom',
+            pad=0.02,
+            aspect=75,
+        )
+        cbar_donor.ax.tick_params(labelsize=14)
+
+        cbar_acceptor = plt.colorbar(
+            acceptor,
+            ticks=acceptor_levels,
+            label='Electron acceptor concentration [mg/l]',
+            location='bottom',
+            pad=0.12,
+            aspect=75,
+        )
+        cbar_acceptor.set_ticklabels([f"{abs(t):.0f}" for t in acceptor_levels])
+        cbar_acceptor.ax.tick_params(labelsize=14)
+
         paths = Plume_max.get_paths()
         if paths and len(paths[0].vertices) > 0:
             Lmax = paths[0]
@@ -334,12 +401,12 @@ class ATSimulation:
 
         results_dir = os.path.join("Results")
         os.makedirs(results_dir, exist_ok=True)
-
         filename_suffix = self.generate_filename_suffix()
-
-        plot_filename = os.path.join(results_dir, f"run_{self.run_index:04d}_plot_{filename_suffix}.pdf")
-
+        plot_filename = os.path.join(
+            results_dir,
+            f"run_{self.run_index:04d}_plot_{filename_suffix}.pdf"
+        )
         plt.savefig(plot_filename)
         print(f"Plot saved to: {plot_filename}")
 
-        # plt.show()
+
