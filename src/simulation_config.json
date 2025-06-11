@@ -4,10 +4,10 @@
     "ca": 8.0,
     "gamma": 3.5,
     "dom_xmin": 0.0,
-    "dom_xmax": 300.0,
+    "dom_xmax": 200.0,
     "dom_ymin": -10.0,
-    "dom_ymax": 20.0,
-    "dom_inc": 1.0,
+    "dom_ymax": 10.0,
+    "dom_inc": 0.5,
     "num_cp": 100,
     "num_terms": 7,
     "elements": [
@@ -17,15 +17,15 @@
             "y": 0,
             "c": 5,
             "r": 1.0,
-            "id": "plume1"
+            "id": "donor"
         },
         {
             "kind": "circle",
             "x": 30,
-            "y": -5,
+            "y": 5,
             "c": 5,
-            "r": 2.0,
-            "id": "plume2"
+            "r": 1.0,
+            "id": "donor"
         }
     ]
 }

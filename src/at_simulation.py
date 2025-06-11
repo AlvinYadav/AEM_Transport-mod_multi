@@ -42,13 +42,18 @@ class ATSimulation:
                 elem.calc_d_q(alpha_t, alpha_l, beta)
                 elem.set_outline(M)
 
-        # solve system for all elements
         self.solve_system(alpha_l, alpha_t, beta, gamma, ca, n, M)
 
-        # compute concentration array
+        #print("Coefficients:")
+        #print(self.coeff)
+
         self.conc_array(self.config.dom_xmin, self.config.dom_ymin,
                         self.config.dom_xmax, self.config.dom_ymax,
                         self.config.dom_inc)
+
+        #print(self.result_tuple[0])
+        #print(self.result_tuple[1])
+        #print(self.result_tuple[2])
 
         stop = timeit.default_timer()
         cpu_time = timedelta(seconds=int(stop - start))
@@ -74,7 +79,7 @@ class ATSimulation:
             for (x_cp, y_cp) in e_i.outline:
                 row = []
                 for j, e_j in enumerate(self.config.elements):
-                    # Transform (x_cp, y_cp) to e_j's local coords
+                    #transform (x_cp, y_cp) to e_j's local coords
                     dx = x_cp - e_j.x
                     dy = y_cp - e_j.y
                     eta, psi = e_j.uv(dx, dy, alpha_l, alpha_t)
@@ -105,11 +110,11 @@ class ATSimulation:
         if Ci < 0 and not is_image:
             return (Ci + ca) * np.exp(-beta * x)
 
-        # Image‐donor (neg conc & image): negative of donor formula,
+        # Image‐donor (neg conc & image)
         if Ci < 0 and is_image:
             return -((abs(Ci) * gamma + ca) * np.exp(-beta * x))
 
-        # Image‐acceptor (pos conc & image): negative of acceptor
+        # Image‐acceptor (pos conc & image)
         if Ci > 0 and is_image:
             return -((Ci + ca) * np.exp(-beta * x))
 
@@ -156,6 +161,8 @@ class ATSimulation:
                     if dx * dx + dy * dy <= elem.r ** 2:
                         self.result[i, j] = elem.c
                         break
+
+        self.result_tuple = (self.xaxis, self.yaxis, self.result)
 
     def generate_filename_suffix(self):
         n_elements = len(self.config.elements)
@@ -207,10 +214,10 @@ class ATSimulation:
         if self.L_max is None:
             return
 
-        #domain dimension
+        # domain dimension
         domain_width = self.config.dom_xmax - self.config.dom_xmin
 
-        #check if L_max is close to the maximum x-domain using threshold
+        # check if L_max is close to the maximum x-domain using threshold
         x_threshold = 0.95
         max_x_distance = self.L_max - self.config.dom_xmin
 
@@ -234,12 +241,12 @@ class ATSimulation:
         result_min = np.min(self.result)
         result_max = np.max(self.result)
 
-        #tolerance
+        # tolerance
         tolerance = 0.01 * max(abs(min_expected), abs(max_expected))
 
         warnings_issued = []
 
-        #number of points outside of expected range
+        #outside of expected range
         outside_range_count = np.sum((self.result > max_expected + tolerance) |
                                      (self.result < min_expected - tolerance))
         total_points = self.result.size
@@ -268,18 +275,28 @@ class ATSimulation:
         phi = np.linspace(0, 2 * pi, 360)
         stats = {}
 
+        # Print detailed statistics for each element like in the original file
+        print("\n=== ELEMENT BOUNDARY STATISTICS ===")
         for idx, elem in enumerate(self.config.elements):
             x_test = elem.x + (r + 1e-9) * np.cos(phi)
             y_test = elem.y + (r + 1e-9) * np.sin(phi)
             Err = [self.calc_c(x, y) for x, y in zip(x_test, y_test)]
-            stats[f"Min{idx + 1}"] = round(np.min(Err), 9)
-            stats[f"Max{idx + 1}"] = round(np.max(Err), 9)
-            stats[f"Mean{idx + 1}"] = round(np.mean(Err), 9)
-            stats[f"Std{idx + 1}"] = round(np.std(Err), 9)
 
-        print("Stats:")
-        for k, v in stats.items():
-            print(f"{k} = {v} mg/l")
+            min_val = round(np.min(Err), 9)
+            max_val = round(np.max(Err), 9)
+            mean_val = round(np.mean(Err), 9)
+            std_val = round(np.std(Err), 9)
+
+            print(f'Element {idx + 1}:')
+            print(f'  Min = {min_val} mg/l')
+            print(f'  Max = {max_val} mg/l')
+            print(f'  Mean = {mean_val} mg/l')
+            print(f'  Standard Deviation = {std_val} mg/l')
+
+            stats[f"Min{idx + 1}"] = min_val
+            stats[f"Max{idx + 1}"] = max_val
+            stats[f"Mean{idx + 1}"] = mean_val
+            stats[f"Std{idx + 1}"] = std_val
 
         results_dir = os.path.join("Results")
         os.makedirs(results_dir, exist_ok=True)
@@ -315,7 +332,7 @@ class ATSimulation:
                 f.write(f"\nL_max: {self.L_max}\n")
 
             # statistics
-            f.write(f"\n=== STATISTICS ===\n")
+            f.write(f"\n=== ELEMENT BOUNDARY STATISTICS ===\n")
             for k, v in stats.items():
                 f.write(f"{k} = {v} mg/l\n")
 
@@ -408,5 +425,3 @@ class ATSimulation:
         )
         plt.savefig(plot_filename)
         print(f"Plot saved to: {plot_filename}")
-
-
