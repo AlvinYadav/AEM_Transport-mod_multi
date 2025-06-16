@@ -60,22 +60,21 @@ class ATSimulation:
 
         # update all elems
         for elem in self.config.elements:
-            if elem.kind in (ATElementType.Circle, ATElementType.Line):
-                elem.calc_d_q(alpha_t, alpha_l, beta)
+            elem.calc_d_q(alpha_t, alpha_l, beta)
             elem.set_outline(M)
 
         self.solve_system(alpha_l, alpha_t, beta, gamma, ca, n, M)
 
-        #print("Coefficients:")
-        #print(self.coeff)
+        print("Coefficients:")
+        print(self.coeff)
 
         self.conc_array(self.config.dom_xmin, self.config.dom_ymin,
                         self.config.dom_xmax, self.config.dom_ymax,
                         self.config.dom_inc)
 
-        #print(self.result_tuple[0])
-        #print(self.result_tuple[1])
-        #print(self.result_tuple[2])
+        print(self.result_tuple[0])
+        print(self.result_tuple[1])
+        print(self.result_tuple[2])
 
         stop = timeit.default_timer()
         cpu_time = timedelta(seconds=int(stop - start))
@@ -104,9 +103,12 @@ class ATSimulation:
                     #transform (x_cp, y_cp) to e_j's local coords
                     dx = x_cp - e_j.x
                     dy = y_cp - e_j.y
-                    eta, psi = e_j.uv(dx, dy, alpha_l, alpha_t)
-                    if e_j.kind == ATElementType.Line:
+                    eta_j, psi_j = e_j.uv(dx, dy, alpha_l, alpha_t)
+                    if e_j.kind == ATElementType.Line and i==j:
                         eta = 0.0
+                    else:
+                        eta = eta_j
+                    psi = psi_j
                     row += self.build_row(e_j, eta, psi, n)
                 b.append(self.f_target(x_cp, e_i, ca, gamma, beta))
                 A.append(row)
@@ -182,8 +184,16 @@ class ATSimulation:
                 for elem in self.config.elements:
                     dx = x - elem.x
                     dy = y - elem.y
-                    if dx * dx + dy * dy <= elem.r ** 2:
-                        self.result[i, j] = elem.c
+                    if elem.kind == ATElementType.Circle:
+                        if dx * dx + dy * dy <= elem.r ** 2:
+                            self.result[i, j] = elem.c
+                        break
+                    else:
+                        xp = dx * math.cos(elem.theta) + dy * math.sin(elem.theta)
+                        yp = -dx * math.sin(elem.theta) + dy * math.cos(elem.theta)
+                        half_len = elem.r / 2.0
+                        if abs(xp) <= half_len and abs(yp) <= inc:
+                            self.result[i, j] = elem.c
                         break
 
         self.result_tuple = (self.xaxis, self.yaxis, self.result)
@@ -340,13 +350,14 @@ class ATSimulation:
             f.write(f"Gamma: {self.config.gamma}\n")
             f.write(f"Ca: {self.config.ca}\n")
             f.write(f"Number of control points: {self.config.num_cp}\n")
+            f.write(f"Orientation: {self.config.orientation}\n")
             f.write(
                 f"Domain: x[{self.config.dom_xmin}, {self.config.dom_xmax}], y[{self.config.dom_ymin}, {self.config.dom_ymax}]\n")
 
             # source geometry
             f.write(f"\n=== ELEMENTS ===\n")
             for idx, elem in enumerate(self.config.elements):
-                f.write(f"Element {idx + 1}: x={elem.x}, y={elem.y}, r={elem.r}, c={elem.c}, id={elem.id}\n")
+                f.write(f"Element {idx + 1}:kind={elem.kind}, x={elem.x}, y={elem.y}, r={elem.r}, c={elem.c}, id={elem.id}\n")
 
             f.write(f"\n=== COMPUTATION INFO ===\n")
             f.write(f"CPU Time [hh:mm:ss]: {cpu_time}\n")
@@ -368,7 +379,7 @@ class ATSimulation:
         min_val = np.min(self.result)
         abs_min = abs(min_val)
 
-        donor_levels = np.linspace(0, max_val, 11)
+        donor_levels = np.linspace(0, max_val, 100)
         acceptor_levels = np.linspace(-abs_min, 0, 9)
 
         plt.figure(figsize=(16, 9), dpi=300)

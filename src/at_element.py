@@ -3,7 +3,6 @@ import numpy as np
 from enum import Enum
 from mathieu_functions_OG import Mathieu
 
-
 class ATElementType(Enum):
     Circle = 0
     Line = 1
@@ -23,7 +22,13 @@ class ATElement:
 
     def calc_d_q(self, alpha_t, alpha_l, beta):
         r = self.r
-        self.d = math.sqrt((r * math.sqrt(alpha_l / alpha_t)) ** 2 - r ** 2)
+        if self.kind == ATElementType.Circle:
+            a = self.r
+        elif self.kind == ATElementType.Line:
+            a = self.r/2.0
+        else:
+            raise ValueError(f"Unknown AT element type: {self.kind}")
+        self.d = math.sqrt((a * math.sqrt(alpha_l / alpha_t))**2 - a**2)
         self.q = (self.d ** 2 * beta ** 2) / 4
         self.m = Mathieu(self.q)
 
@@ -37,9 +42,7 @@ class ATElement:
             ]
 
         elif self.kind == ATElementType.Line:
-            # sample num_cp points along a segment of total length self.r
             half_len = self.r / 2.0
-            # equally spaced
             t_vals = np.linspace(-half_len, half_len, num_cp)
             self.outline = [
                 (self.x + t * math.cos(self.theta),
