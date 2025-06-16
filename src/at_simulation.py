@@ -379,7 +379,7 @@ class ATSimulation:
         min_val = np.min(self.result)
         abs_min = abs(min_val)
 
-        donor_levels = np.linspace(0, max_val, 100)
+        donor_levels = np.linspace(0, max_val, 11)
         acceptor_levels = np.linspace(-abs_min, 0, 9)
 
         plt.figure(figsize=(16, 9), dpi=300)
