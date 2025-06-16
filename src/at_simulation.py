@@ -346,7 +346,7 @@ class ATSimulation:
             # source geometry
             f.write(f"\n=== ELEMENTS ===\n")
             for idx, elem in enumerate(self.config.elements):
-                f.write(f"Element {idx + 1}: x={elem.x}, y={elem.y}, r={elem.r}, c={elem.c}\n, id={elem.id}\n")
+                f.write(f"Element {idx + 1}: x={elem.x}, y={elem.y}, r={elem.r}, c={elem.c}, id={elem.id}\n")
 
             f.write(f"\n=== COMPUTATION INFO ===\n")
             f.write(f"CPU Time [hh:mm:ss]: {cpu_time}\n")
