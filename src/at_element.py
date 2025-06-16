@@ -39,7 +39,7 @@ class ATElement:
         elif self.kind == ATElementType.Line:
             # sample num_cp points along a segment of total length self.r
             half_len = self.r / 2.0
-            # equally‐spaced
+            # equally spaced
             t_vals = np.linspace(-half_len, half_len, num_cp)
             self.outline = [
                 (self.x + t * math.cos(self.theta),

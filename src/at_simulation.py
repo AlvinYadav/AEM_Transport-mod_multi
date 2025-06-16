@@ -7,11 +7,21 @@ import logging
 import json
 import os
 import matplotlib.pyplot as plt_temp
-
+import math
 from at_config import ATConfiguration
-from at_element import ATElementType
+from at_element import ATElement, ATElementType
 
 logger = logging.getLogger(__name__)
+
+def create_mirrored_element(elem):
+    return ATElement(
+        kind=elem.kind,
+        x=elem.x,
+        y=-elem.y,
+        c=-elem.c,
+        r=elem.r,
+        theta=elem.theta if elem.kind == ATElementType.Line else math.pi / 2  # ensure theta is preserved
+    )
 
 class ATSimulation:
     def __init__(self, config: ATConfiguration):
@@ -25,6 +35,18 @@ class ATSimulation:
     def run(self):
         if len(self.config.elements) < 1:
             raise ValueError("Simulation requires at least one element.")
+
+        if self.config.orientation == "vertical":
+            updated_elements = []
+            for elem in self.config.elements:
+                if elem.y >= -(elem.r+0.1):
+                    raise ValueError(f"Element '{elem.id}' must have y < -(r+0.1) for vertical orientation.")
+                updated_elements.append(elem)
+                mirrored = create_mirrored_element(elem)
+                mirrored.id = f"image_{elem.id}"
+                updated_elements.append(mirrored)
+            self.config.elements = updated_elements
+            self.config.dom_ymax = 0
 
         start = timeit.default_timer()
 
@@ -225,7 +247,7 @@ class ATSimulation:
 
         # Check X-direction (most critical for L_max)
         if max_x_distance >= x_threshold * domain_width:
-            warning_msg = (f"WARNING: L_max ({self.L_max:.1f} m) appears to be capped by X-domain boundary! "
+            warning_msg = (f"WARNING: L_max ({self.L_max:.1f} m) is capped by x-domain boundary! "
                            f"L_max extends to {max_x_distance / domain_width * 100:.1f}% of domain width. ")
             print(warning_msg)
 
@@ -324,7 +346,7 @@ class ATSimulation:
             # source geometry
             f.write(f"\n=== ELEMENTS ===\n")
             for idx, elem in enumerate(self.config.elements):
-                f.write(f"Element {idx + 1}: x={elem.x}, y={elem.y}, r={elem.r}, c={elem.c}\n")
+                f.write(f"Element {idx + 1}: x={elem.x}, y={elem.y}, r={elem.r}, c={elem.c}\n, id={elem.id}\n")
 
             f.write(f"\n=== COMPUTATION INFO ===\n")
             f.write(f"CPU Time [hh:mm:ss]: {cpu_time}\n")
@@ -352,7 +374,7 @@ class ATSimulation:
         plt.figure(figsize=(16, 9), dpi=300)
         mpl.rcParams.update({"font.size": 22})
         plt.xlabel("$x$ (m)")
-        plt.ylabel("$y$ (m)")
+        plt.ylabel("$z$ (m)" if self.config.orientation == "vertical" else "$y$ (m)")
         plt.xticks(
             range(0, len(self.xaxis), int(100 / inc)),
             self.xaxis[::int(100 / inc)].round(0)

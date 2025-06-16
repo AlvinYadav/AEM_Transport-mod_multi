@@ -17,6 +17,7 @@ class ATConfiguration:
         self.num_cp = 100
         self.num_terms = 7
         self.elements = []
+        self.orientation = "horizontal"
 
     @staticmethod
     def from_json(filename):
@@ -36,6 +37,7 @@ class ATConfiguration:
         config.dom_inc = data.get('dom_inc', config.dom_inc)
         config.num_cp = data.get('num_cp', config.num_cp)
         config.num_terms = data.get('num_terms', config.num_terms)
+        config.orientation = data.get('orientation', config.orientation)
 
         for i, elem_data in enumerate(data.get('elements', [])):
             kind = elem_data['kind'].lower()
