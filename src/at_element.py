@@ -6,15 +6,16 @@ from mathieu_functions_OG import Mathieu
 
 class ATElementType(Enum):
     Circle = 0
-
+    Line = 1
 
 class ATElement:
-    def __init__(self, kind: ATElementType, x: float, y: float, c: float, r = 1.0):
+    def __init__(self, kind: ATElementType, x: float, y: float, c: float, r = 1.0, theta: float = math.pi/2):
         self.kind = kind
         self.x = x
         self.y = y
         self.c = c
         self.r = r
+        self.theta = theta
         self.d = None
         self.q = None
         self.outline = []
@@ -27,9 +28,27 @@ class ATElement:
         self.m = Mathieu(self.q)
 
     def set_outline(self, num_cp):
-        phi = np.linspace(0, 2 * np.pi, num_cp, endpoint=False)
-        r = self.r
-        self.outline = [(self.x + r * np.cos(p), self.y + r * np.sin(p)) for p in phi]
+        if self.kind == ATElementType.Circle:
+            phi = np.linspace(0, 2 * math.pi, num_cp, endpoint=False)
+            self.outline = [
+                (self.x + self.r * math.cos(p),
+                 self.y + self.r * math.sin(p))
+                for p in phi
+            ]
+
+        elif self.kind == ATElementType.Line:
+            # sample num_cp points along a segment of total length self.r
+            half_len = self.r / 2.0
+            # equally‐spaced
+            t_vals = np.linspace(-half_len, half_len, num_cp)
+            self.outline = [
+                (self.x + t * math.cos(self.theta),
+                 self.y + t * math.sin(self.theta))
+                for t in t_vals
+            ]
+        else:
+            raise ValueError(f"Unknown element kind: {self.kind}")
+
 
     def uv(self, x, y, alpha_l, alpha_t):
         d = self.d

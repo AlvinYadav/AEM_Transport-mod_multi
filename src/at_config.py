@@ -1,5 +1,6 @@
 import json
 from at_element import ATElement, ATElementType
+import math
 
 class ATConfiguration:
     def __init__(self):
@@ -37,7 +38,8 @@ class ATConfiguration:
         config.num_terms = data.get('num_terms', config.num_terms)
 
         for i, elem_data in enumerate(data.get('elements', [])):
-            if elem_data['kind'] == 'circle':
+            kind = elem_data['kind'].lower()
+            if kind == 'circle':
                 elem = ATElement(
                     kind=ATElementType.Circle,
                     x=elem_data['x'],
@@ -45,10 +47,21 @@ class ATConfiguration:
                     c=elem_data['c'],
                     r=elem_data['r']
                 )
-                elem.label = elem_data.get('label', f"Element {i+1}")
-                elem.id = elem_data.get('id', f"source_{len(config.elements)}")
-                config.elements.append(elem)
+            elif kind == 'line':
+                elem = ATElement(
+                    kind=ATElementType.Line,
+                    x=elem_data['x'],
+                    y=elem_data['y'],
+                    c=elem_data['c'],
+                    r=elem_data['r'],  # total length
+                    theta=elem_data.get('theta', math.pi / 2)  # default vertical
+                )
+            else:
+                raise ValueError(f"Unknown element kind '{elem_data['kind']}'")
 
+            elem.label = elem_data.get('label', f"Element {i + 1}")
+            elem.id = elem_data.get('id', f"source_{len(config.elements)}")
+            config.elements.append(elem)
         return config
 
     def annotate_elements_on_plot(self, ax):

@@ -24,7 +24,7 @@ class ATSimulation:
 
     def run(self):
         if len(self.config.elements) < 1:
-            raise ValueError("Simulation requires at least one circular element.")
+            raise ValueError("Simulation requires at least one element.")
 
         start = timeit.default_timer()
 
@@ -38,9 +38,9 @@ class ATSimulation:
 
         # update all elems
         for elem in self.config.elements:
-            if elem.kind == ATElementType.Circle:
+            if elem.kind in (ATElementType.Circle, ATElementType.Line):
                 elem.calc_d_q(alpha_t, alpha_l, beta)
-                elem.set_outline(M)
+            elem.set_outline(M)
 
         self.solve_system(alpha_l, alpha_t, beta, gamma, ca, n, M)
 
@@ -83,6 +83,8 @@ class ATSimulation:
                     dx = x_cp - e_j.x
                     dy = y_cp - e_j.y
                     eta, psi = e_j.uv(dx, dy, alpha_l, alpha_t)
+                    if e_j.kind == ATElementType.Line:
+                        eta = 0.0
                     row += self.build_row(e_j, eta, psi, n)
                 b.append(self.f_target(x_cp, e_i, ca, gamma, beta))
                 A.append(row)
