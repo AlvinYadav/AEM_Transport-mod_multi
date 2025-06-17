@@ -176,8 +176,8 @@ class ATSimulation:
             return total - self.config.ca
 
     def conc_array(self, xmin, ymin, xmax, ymax, inc):
-        self.xaxis = np.arange(xmin, xmax, inc)
-        self.yaxis = np.arange(ymin, ymax, inc)
+        self.xaxis = np.arange(xmin, xmax+inc, inc)
+        self.yaxis = np.arange(ymin, ymax+inc, inc)
         self.result = np.zeros((len(self.yaxis), len(self.xaxis)))
 
         for i, y in enumerate(self.yaxis):
@@ -370,7 +370,7 @@ class ATSimulation:
             # source geometry
             f.write(f"\n=== ELEMENTS ===\n")
             for idx, elem in enumerate(self.config.elements):
-                if (elem.kind==Circle):
+                if (elem.kind==ATElementType.Circle):
                     f.write(f"Element {idx + 1}:kind={elem.kind}, x={elem.x}, y={elem.y}, r={elem.r}, c={elem.c}, id={elem.id}\n")
                 else:
                     f.write(f"Element {idx + 1}:kind={elem.kind}, x={elem.x}, y={elem.y}, r={elem.r}, theta={elem.theta}, c={elem.c}, id={elem.id}\n")
@@ -434,8 +434,8 @@ class ATSimulation:
         if y_ticks[-1] < ymax:
             y_ticks.append(ymax)
 
-        plt.xticks(x_ticks)
-        plt.yticks(y_ticks)
+        plt.xlim(xmin, xmax)
+        plt.ylim(ymin, ymax)
 
         plt.xlabel("$x$ (m)")
         plt.ylabel("$z$ (m)" if self.config.orientation == "vertical" else "$y$ (m)")
@@ -474,9 +474,7 @@ class ATSimulation:
             if self.L_max is None:
                 print("L_max: -")
 
-        if self.config.plot_aspect == "equal":
-            plt.axis("equal")
-        elif self.config.plot_aspect == "scaled":
+        if self.config.plot_aspect == "scaled":
             plt.axis("scaled")
         else:  # "auto"
             plt.axis("auto")

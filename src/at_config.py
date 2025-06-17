@@ -52,13 +52,14 @@ class ATConfiguration:
                     r=elem_data['r']
                 )
             elif kind == 'line':
+                theta_deg = elem_data['theta',90]
                 elem = ATElement(
                     kind=ATElementType.Line,
                     x=elem_data['x'],
                     y=elem_data['y'],
                     c=elem_data['c'],
                     r=elem_data['r'],  # total length
-                    theta=elem_data.get('theta', math.pi / 2)  # default vertical
+                    theta=math.radians(theta_deg)  # default vertical
                 )
             else:
                 raise ValueError(f"Unknown element kind '{elem_data['kind']}'")

@@ -14,7 +14,7 @@
     "plot_aspect":"scaled",
     "elements": [
         {
-            "kind": "line",
+            "kind": "circle",
             "x": 0,
             "y": 0,
             "c": 5,
