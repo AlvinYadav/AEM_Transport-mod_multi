@@ -1,12 +1,15 @@
 # Written by Willi Kappler, willi.kappler@uni-tuebingen.de
 # Based on code from Anton Köhler
 
-
-
-# Python std library
+# Python std library:
 import math
 from enum import Enum
-from abc import ABC, abstractmethod
+
+# External library:
+import numpy as np
+
+# Local imports:
+from mathieu_functions_OG import Mathieu
 
 
 class ATElementType(Enum):
@@ -21,77 +24,64 @@ class ATElementType(Enum):
     Line = 1
 
 
-class ATElement(ABC):
-    def __init__(self, kind: ATElementType):
+class ATElement:
+    def __init__(self, kind: ATElementType, x: float, y: float, c: float, r=1.0, theta: float = math.pi/2):
         self.kind = kind
-
-    @abstractmethod
-    def is_inside(self, x, y) -> bool:
-        pass
-
-    @abstractmethod
-    def c_inside(self) -> float:
-        pass
-
-class ATECircle(ATElement):
-    def __init__(self, c: float, x: float, y: float, r: float):
-        super().__init__(ATElementType.Circle)
-        self.c: float = c # Concentration
         self.x: float = x
         self.y: float = y
+        self.c: float = c
         self.r: float = r
-
-        # Calculated parameters:
-        self.q = math.nan
-        self.d = math.nan
-        self.outline = []
-        self.target = []
-        self.m_list = []
-        self.f_list = []
+        self.theta: float = theta
+        self.d: float = 0.0
+        self.q: float = 0.0
+        self.m: Mathieu = Mathieu(0.0)
+        self.outline: list = []
+        self.label: str = ""
+        self.id: str = ""
 
     def calc_d_q(self, alpha_t: float, alpha_l: float, beta: float):
-        #d = np.sqrt((r * np.sqrt(alpha_l / alpha_t))**2 - r**2)
-        #q = (d**2 * beta**2) / 4
-        self.d = math.sqrt(self.r * math.sqrt(alpha_l / alpha_t)**2.0 - self.r**2.0)
-        self.q = (self.d**2.0 * beta**2.0) / 4.0
+        if self.kind == ATElementType.Circle:
+            a: float = self.r
+        elif self.kind == ATElementType.Line:
+            a = self.r / 2.0
+        else:
+            raise ValueError(f"Unknown AT element type: {self.kind}")
+        self.d = math.sqrt((a * math.sqrt(alpha_l / alpha_t))**2 - a**2)
+        self.q = (self.d ** 2 * beta ** 2) / 4
+        self.m = Mathieu(self.q)
 
     def set_outline(self, num_cp: int):
-        step: float = 2.0 * math.pi / float(num_cp)
+        if self.kind == ATElementType.Circle:
+            for p in np.linspace(0, 2 * math.pi, num_cp, endpoint=False):
+                self.outline.append((self.x + self.r * math.cos(p),
+                    self.y + self.r * math.sin(p)))
 
-        self.outline = []
+        elif self.kind == ATElementType.Line:
+            half_len = self.r / 2.0
+            for t in np.linspace(-half_len, half_len, num_cp):
+                self.outline.append((self.x + t * math.cos(self.theta),
+                    self.y + t * math.sin(self.theta)))
+        else:
+            raise ValueError(f"Unknown element kind: {self.kind}")
 
-        for i in range(0, num_cp):
-            alpha = float(i) * step
-            x = self.r * math.cos(alpha)
-            y = self.r * math.sin(alpha)
-            self.outline.append((x, y))
+    def uv(self, x: float, y: float, alpha_l: float,
+            alpha_t: float) -> tuple[float, float]:
+        d: float = self.d
+        Y: float = math.sqrt(alpha_l / alpha_t) * y
+        B: float = x**2 + Y**2 - d**2
+        sqrt_term: float = math.sqrt(B**2 + 4 * d**2 * x**2)
+        p: float = (-B + sqrt_term) / (2 * d**2)
+        q: float = (-B - sqrt_term) / (2 * d**2)
 
-    def calc_target(self, ca: float, beta: float, gamma: float):
-        #if Ci > 0:
-        #    return (Ci*gamma+Ca)*np.exp(-beta*x), Ci, 'r'
-        #else:
-        #    return (Ci)*np.exp(-beta*x), Ci, 'b'
+        psi_0: float = math.asin(min(max(math.sqrt(p), -1.0), 1.0))
+        if Y >= 0.0 and x >= 0.0:
+            psi: float = psi_0
+        elif Y < 0.0 and x >= 0.0:
+            psi = math.pi - psi_0
+        elif Y <= 0.0 and x < 0.0:
+            psi = math.pi + psi_0
+        else:
+            psi = 2.0 * math.pi - psi_0
 
-        f1: float = self.c * gamma + ca if self.c > 0.0 else self.c
-
-        for (x, _) in self.outline:
-            f2: float = math.exp(-beta * (x + self.x))
-            self.target.append(f1 * f2)
-
-    def is_inside(self, x, y) -> bool:
-        d = math.hypot(x - self.x, y - self.y)
-        return d <= self.r
-
-    def c_inside(self) -> float:
-        return self.c
-
-class ATELine(ATElement):
-    def __init__(self, x1: float, y1: float, x2: float, y2: float):
-        super().__init__(ATElementType.Line)
-        self.x1: float = x1
-        self.y1: float = y1
-        self.x2: float = x2
-        self.y2: float = y2
-
-
-
+        eta: float = 0.5 * math.log(1 - 2 * q + 2 * math.sqrt(q**2 - q))
+        return (eta, psi)
