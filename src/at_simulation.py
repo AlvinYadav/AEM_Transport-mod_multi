@@ -8,6 +8,9 @@ import json
 import os
 import matplotlib.pyplot as plt_temp
 import math
+
+from matplotlib.patches import Circle
+
 from at_config import ATConfiguration
 from at_element import ATElement, ATElementType
 
@@ -65,16 +68,16 @@ class ATSimulation:
 
         self.solve_system(alpha_l, alpha_t, beta, gamma, ca, n, M)
 
-        print("Coefficients:")
-        print(self.coeff)
+        #print("Coefficients:")
+        #print(self.coeff)
 
         self.conc_array(self.config.dom_xmin, self.config.dom_ymin,
                         self.config.dom_xmax, self.config.dom_ymax,
                         self.config.dom_inc)
 
-        print(self.result_tuple[0])
-        print(self.result_tuple[1])
-        print(self.result_tuple[2])
+        #print(self.result_tuple[0])
+        #print(self.result_tuple[1])
+        #print(self.result_tuple[2])
 
         stop = timeit.default_timer()
         cpu_time = timedelta(seconds=int(stop - start))
@@ -187,14 +190,14 @@ class ATSimulation:
                     if elem.kind == ATElementType.Circle:
                         if dx * dx + dy * dy <= elem.r ** 2:
                             self.result[i, j] = elem.c
-                        break
-                    else:
-                        xp = dx * math.cos(elem.theta) + dy * math.sin(elem.theta)
-                        yp = -dx * math.sin(elem.theta) + dy * math.cos(elem.theta)
-                        half_len = elem.r / 2.0
-                        if abs(xp) <= half_len and abs(yp) <= inc:
-                            self.result[i, j] = elem.c
-                        break
+                            break
+                    #else:
+                        #xp = dx * math.cos(elem.theta) + dy * math.sin(elem.theta)
+                        #yp = -dx * math.sin(elem.theta) + dy * math.cos(elem.theta)
+                        #half_len = elem.r / 2.0
+                        #if abs(xp) <= half_len and abs(yp) <= inc:
+                            #self.result[i, j] = elem.c
+                            #break
 
         self.result_tuple = (self.xaxis, self.yaxis, self.result)
 
@@ -311,10 +314,20 @@ class ATSimulation:
 
         print("\n=== ELEMENT BOUNDARY STATISTICS ===")
         for idx, elem in enumerate(self.config.elements):
-            x_test = elem.x + (r + 1e-9) * np.cos(phi)
-            y_test = elem.y + (r + 1e-9) * np.sin(phi)
-            Err = [self.calc_c(x, y) for x, y in zip(x_test, y_test)]
+            if elem.kind == ATElementType.Circle:
+                phi = np.linspace(0, 2 * pi, 360)
+                x_test = elem.x + (elem.r + 1e-9) * np.cos(phi)
+                y_test = elem.y + (elem.r + 1e-9) * np.sin(phi)
+            elif elem.kind == ATElementType.Line:
+                half_len = elem.r / 2
+                s = np.linspace(-half_len + 1e-9, half_len - 1e-9, 360)
+                theta = elem.theta
+                x_test = elem.x + s * cos(theta)
+                y_test = elem.y + s * sin(theta)
+            else:
+                raise ValueError(f"Unknown element type: {elem.kind}")
 
+            Err = [self.calc_c(x, y) for x, y in zip(x_test, y_test)]
             min_val = round(np.min(Err), 9)
             max_val = round(np.max(Err), 9)
             mean_val = round(np.mean(Err), 9)
@@ -357,7 +370,10 @@ class ATSimulation:
             # source geometry
             f.write(f"\n=== ELEMENTS ===\n")
             for idx, elem in enumerate(self.config.elements):
-                f.write(f"Element {idx + 1}:kind={elem.kind}, x={elem.x}, y={elem.y}, r={elem.r}, c={elem.c}, id={elem.id}\n")
+                if (elem.kind==Circle):
+                    f.write(f"Element {idx + 1}:kind={elem.kind}, x={elem.x}, y={elem.y}, r={elem.r}, c={elem.c}, id={elem.id}\n")
+                else:
+                    f.write(f"Element {idx + 1}:kind={elem.kind}, x={elem.x}, y={elem.y}, r={elem.r}, theta={elem.theta}, c={elem.c}, id={elem.id}\n")
 
             f.write(f"\n=== COMPUTATION INFO ===\n")
             f.write(f"CPU Time [hh:mm:ss]: {cpu_time}\n")
@@ -378,41 +394,51 @@ class ATSimulation:
         max_val = np.max(self.result)
         min_val = np.min(self.result)
         abs_min = abs(min_val)
+        xmin, xmax = self.config.dom_xmin, self.config.dom_xmax
+        ymin, ymax = self.config.dom_ymin, self.config.dom_ymax
 
         donor_levels = np.linspace(0, max_val, 11)
         acceptor_levels = np.linspace(-abs_min, 0, 9)
 
         plt.figure(figsize=(16, 9), dpi=300)
         mpl.rcParams.update({"font.size": 22})
-        plt.xlabel("$x$ (m)")
-        plt.ylabel("$z$ (m)" if self.config.orientation == "vertical" else "$y$ (m)")
-        plt.xticks(
-            range(0, len(self.xaxis), int(100 / inc)),
-            self.xaxis[::int(100 / inc)].round(0)
-        )
-        plt.yticks(
-            range(0, len(self.yaxis), int(10 / inc)),
-            self.yaxis[::int(10 / inc)].round(0)
-        )
+
+        X, Y = np.meshgrid(self.xaxis, self.yaxis)
 
         donor = plt.contourf(
+            X,Y,
             self.result,
             levels=donor_levels,
             cmap='Reds',
             extend='max'
         )
         acceptor = plt.contourf(
+            X,Y,
             self.result,
             levels=acceptor_levels,
             cmap='Blues_r',
             extend='min'
         )
         Plume_max = plt.contour(
+            X,Y,
             self.result,
             levels=[0],
             linewidths=2,
             colors='k'
         )
+
+        x_ticks = list(np.arange(xmin, xmax, 100))
+        if x_ticks[-1] < xmax:
+            x_ticks.append(xmax)
+        y_ticks = list(np.arange(ymin, ymax, 10))
+        if y_ticks[-1] < ymax:
+            y_ticks.append(ymax)
+
+        plt.xticks(x_ticks)
+        plt.yticks(y_ticks)
+
+        plt.xlabel("$x$ (m)")
+        plt.ylabel("$z$ (m)" if self.config.orientation == "vertical" else "$y$ (m)")
 
         plt.subplots_adjust(bottom=0.20)
 
@@ -439,14 +465,21 @@ class ATSimulation:
 
         paths = Plume_max.get_paths()
         if paths and len(paths[0].vertices) > 0:
-            Lmax = paths[0]
-            calculated_lmax = int(np.max(Lmax.vertices[:, 0]) * inc)
+            verts = paths[0].vertices
+            calculated_lmax = int(np.floor(np.max(verts[:, 0])))
             if self.L_max != calculated_lmax:
                 print(f"Warning: L_max mismatch. Previously calculated: {self.L_max}, Current: {calculated_lmax}")
                 self.L_max = calculated_lmax
         else:
             if self.L_max is None:
                 print("L_max: -")
+
+        if self.config.plot_aspect == "equal":
+            plt.axis("equal")
+        elif self.config.plot_aspect == "scaled":
+            plt.axis("scaled")
+        else:  # "auto"
+            plt.axis("auto")
 
         plt.tight_layout()
 

@@ -18,6 +18,7 @@ class ATConfiguration:
         self.num_terms = 7
         self.elements = []
         self.orientation = "horizontal"
+        self.plot_aspect = "scaled"
 
     @staticmethod
     def from_json(filename):
@@ -38,6 +39,7 @@ class ATConfiguration:
         config.num_cp = data.get('num_cp', config.num_cp)
         config.num_terms = data.get('num_terms', config.num_terms)
         config.orientation = data.get('orientation', config.orientation)
+        config.plot_aspect = data.get('plot_aspect', config.plot_aspect)
 
         for i, elem_data in enumerate(data.get('elements', [])):
             kind = elem_data['kind'].lower()
