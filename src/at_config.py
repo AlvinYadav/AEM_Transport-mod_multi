@@ -52,7 +52,7 @@ class ATConfiguration:
                     r=elem_data['r']
                 )
             elif kind == 'line':
-                theta_deg = elem_data['theta',90]
+                theta_deg = elem_data.get('theta',90)
                 elem = ATElement(
                     kind=ATElementType.Line,
                     x=elem_data['x'],

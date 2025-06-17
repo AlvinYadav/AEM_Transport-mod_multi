@@ -8,13 +8,49 @@ import json
 import os
 import matplotlib.pyplot as plt_temp
 import math
-
+from concurrent.futures import ProcessPoolExecutor
 from matplotlib.patches import Circle
 
 from at_config import ATConfiguration
 from at_element import ATElement, ATElementType
 
 logger = logging.getLogger(__name__)
+
+def _compute_point(args):
+    x, y, elements, coeff, num_terms, alpha_l, alpha_t, beta, ca, gamma = args
+    total_terms = 2 * num_terms - 1
+
+    F = 0.0
+    for idx, elem in enumerate(elements):
+        dx = x - elem.x
+        dy = y - elem.y
+        eta, psi = elem.uv(dx, dy, alpha_l, alpha_t)
+
+        block = coeff[idx * total_terms : (idx + 1) * total_terms]
+
+        Fi = block[0] * elem.m.ce(0, psi).real * elem.m.Ke(0, eta).real
+
+        for j in range(1, num_terms):
+            Fi += block[2*j - 1] * elem.m.se(j, psi).real * elem.m.Ko(j, eta).real
+            Fi += block[2*j    ] * elem.m.ce(j, psi).real * elem.m.Ke(j, eta).real
+
+        F += Fi
+
+    total = F * np.exp(beta * x)
+    if total > ca:
+        conc = (total - ca) / gamma
+    else:
+        conc = total - ca
+
+    for elem in elements:
+        dx = x - elem.x
+        dy = y - elem.y
+        if elem.kind == ATElementType.Circle:
+            if dx*dx + dy*dy <= elem.r**2:
+                conc = elem.c
+                break
+
+    return conc
 
 def create_mirrored_element(elem):
     return ATElement(
@@ -178,27 +214,27 @@ class ATSimulation:
     def conc_array(self, xmin, ymin, xmax, ymax, inc):
         self.xaxis = np.arange(xmin, xmax+inc, inc)
         self.yaxis = np.arange(ymin, ymax+inc, inc)
-        self.result = np.zeros((len(self.yaxis), len(self.xaxis)))
 
-        for i, y in enumerate(self.yaxis):
-            for j, x in enumerate(self.xaxis):
-                self.result[i, j] = self.calc_c(x, y)
+        xs, ys = np.meshgrid(self.xaxis, self.yaxis)
+        tasks = [
+            (
+                float(x), float(y),
+                self.config.elements,
+                self.coeff,
+                self.config.num_terms,
+                self.config.alpha_l,
+                self.config.alpha_t,
+                self.config.beta,
+                self.config.ca,
+                self.config.gamma
+            )
+            for x, y in zip(xs.ravel(), ys.ravel())
+        ]
 
-                for elem in self.config.elements:
-                    dx = x - elem.x
-                    dy = y - elem.y
-                    if elem.kind == ATElementType.Circle:
-                        if dx * dx + dy * dy <= elem.r ** 2:
-                            self.result[i, j] = elem.c
-                            break
-                    #else:
-                        #xp = dx * math.cos(elem.theta) + dy * math.sin(elem.theta)
-                        #yp = -dx * math.sin(elem.theta) + dy * math.cos(elem.theta)
-                        #half_len = elem.r / 2.0
-                        #if abs(xp) <= half_len and abs(yp) <= inc:
-                            #self.result[i, j] = elem.c
-                            #break
+        with ProcessPoolExecutor() as executor:
+            flat = list(executor.map(_compute_point, tasks))
 
+        self.result = np.array(flat).reshape(xs.shape)
         self.result_tuple = (self.xaxis, self.yaxis, self.result)
 
     def generate_filename_suffix(self):
