@@ -73,4 +73,3 @@ class ATElement:
 
         eta = 0.5 * math.log(1 - 2 * q + 2 * math.sqrt(q**2 - q))
         return eta, psi
-
