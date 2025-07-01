@@ -7,7 +7,7 @@
     "dom_xmax": 100.0,
     "dom_ymin": -10.0,
     "dom_ymax": 10.0,
-    "dom_inc": 0.5,
+    "dom_inc": 0.2,
     "num_cp": 100,
     "num_terms": 7,
     "orientation": "horizontal",
@@ -18,7 +18,7 @@
             "x": 0,
             "y": 0,
             "c": 5,
-            "r": 1.0,
+            "l": 1.0,
             "id": "donor"
         }
     ]
