@@ -58,7 +58,7 @@ class ATConfiguration:
                     x=elem_data['x'],
                     y=elem_data['y'],
                     c=elem_data['c'],
-                    r=elem_data['r'],  # total length
+                    r=elem_data['r'],  #radius
                     theta=math.radians(theta_deg)  # default vertical
                 )
             else:

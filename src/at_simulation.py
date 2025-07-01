@@ -78,7 +78,7 @@ class ATSimulation:
         if self.config.orientation == "vertical":
             updated_elements = []
             for elem in self.config.elements:
-                if elem.y >= -(elem.r+0.1):
+                if elem.y > -(elem.r+0.1):
                     raise ValueError(f"Element '{elem.id}' must have y < -(r+0.1) for vertical orientation.")
                 updated_elements.append(elem)
                 mirrored = create_mirrored_element(elem)
@@ -343,50 +343,55 @@ class ATSimulation:
 
     def print_statistics(self, cpu_time):
         from math import cos, sin, pi
-
+    
         r = self.config.elements[0].r
         phi = np.linspace(0, 2 * pi, 360)
         stats = {}
-
+    
         print("\n=== ELEMENT BOUNDARY STATISTICS ===")
         for idx, elem in enumerate(self.config.elements):
             if elem.kind == ATElementType.Circle:
                 phi = np.linspace(0, 2 * pi, 360)
                 x_test = elem.x + (elem.r + 1e-9) * np.cos(phi)
                 y_test = elem.y + (elem.r + 1e-9) * np.sin(phi)
+    
             elif elem.kind == ATElementType.Line:
                 half_len = elem.r / 2
                 s = np.linspace(-half_len + 1e-9, half_len - 1e-9, 360)
                 theta = elem.theta
                 x_test = elem.x + s * cos(theta)
                 y_test = elem.y + s * sin(theta)
+    
             else:
                 raise ValueError(f"Unknown element type: {elem.kind}")
-
+    
             Err = [self.calc_c(x, y) for x, y in zip(x_test, y_test)]
             min_val = round(np.min(Err), 9)
             max_val = round(np.max(Err), 9)
             mean_val = round(np.mean(Err), 9)
             std_val = round(np.std(Err), 9)
-
+    
             print(f'Element {idx + 1}:')
             print(f'  Min = {min_val} mg/l')
             print(f'  Max = {max_val} mg/l')
             print(f'  Mean = {mean_val} mg/l')
             print(f'  Standard Deviation = {std_val} mg/l')
-
+    
             stats[f"Min{idx + 1}"] = min_val
             stats[f"Max{idx + 1}"] = max_val
             stats[f"Mean{idx + 1}"] = mean_val
             stats[f"Std{idx + 1}"] = std_val
-
+    
+        # --- save stats to file ---
         results_dir = os.path.join("Results")
         os.makedirs(results_dir, exist_ok=True)
-
+    
         filename_suffix = self.generate_filename_suffix()
-        stats_filename = os.path.join(results_dir, f"run_{self.run_index:04d}_stats_{filename_suffix}.txt")
-
-        # save statistics with config
+        stats_filename = os.path.join(
+            results_dir,
+            f"run_{self.run_index:04d}_stats_{filename_suffix}.txt"
+        )
+    
         with open(stats_filename, "w") as f:
             # config parameters
             f.write("=== CONFIGURATION PARAMETERS ===\n")
@@ -401,28 +406,84 @@ class ATSimulation:
             f.write(f"Number of control points: {self.config.num_cp}\n")
             f.write(f"Orientation: {self.config.orientation}\n")
             f.write(
-                f"Domain: x[{self.config.dom_xmin}, {self.config.dom_xmax}], y[{self.config.dom_ymin}, {self.config.dom_ymax}]\n")
-
+                f"Domain: x[{self.config.dom_xmin}, {self.config.dom_xmax}], "
+                f"y[{self.config.dom_ymin}, {self.config.dom_ymax}]\n"
+            )
+    
             # source geometry
             f.write(f"\n=== ELEMENTS ===\n")
             for idx, elem in enumerate(self.config.elements):
-                if (elem.kind==ATElementType.Circle):
-                    f.write(f"Element {idx + 1}:kind={elem.kind}, x={elem.x}, y={elem.y}, r={elem.r}, c={elem.c}, id={elem.id}\n")
+                if elem.kind == ATElementType.Circle:
+                    f.write(
+                        f"Element {idx + 1}: kind={elem.kind}, x={elem.x}, "
+                        f"y={elem.y}, r={elem.r}, c={elem.c}, id={elem.id}\n"
+                    )
                 else:
-                    f.write(f"Element {idx + 1}:kind={elem.kind}, x={elem.x}, y={elem.y}, r={elem.r}, theta={elem.theta}, c={elem.c}, id={elem.id}\n")
-
+                    f.write(
+                        f"Element {idx + 1}: kind={elem.kind}, x={elem.x}, "
+                        f"y={elem.y}, r={elem.r}, theta={elem.theta}, "
+                        f"c={elem.c}, id={elem.id}\n"
+                    )
+    
+            # computation info
             f.write(f"\n=== COMPUTATION INFO ===\n")
             f.write(f"CPU Time [hh:mm:ss]: {cpu_time}\n")
-
             if self.L_max is not None:
                 f.write(f"\nL_max: {self.L_max}\n")
-
-            # statistics
+    
+            # boundary stats
             f.write(f"\n=== ELEMENT BOUNDARY STATISTICS ===\n")
             for k, v in stats.items():
                 f.write(f"{k} = {v} mg/l\n")
-
+    
         print(f"Statistics saved to: {stats_filename}")
+    
+        # --- PLOT ABSOLUTE ERROR ALONG BOUNDARIES ---
+        mpl.rcParams.update({'font.size': 22})
+        plt.figure(figsize=(16, 9), dpi=300)
+    
+        styles = ['-', '--', ':', '-.']
+        for idx, elem in enumerate(self.config.elements):
+            # generate the same sampling for each element
+            if elem.kind == ATElementType.Circle:
+                x_test = elem.x + (elem.r + 1e-9) * np.cos(phi)
+                y_test = elem.y + (elem.r + 1e-9) * np.sin(phi)
+            elif elem.kind == ATElementType.Line:
+                half_len = elem.r / 2
+                s = np.linspace(-half_len + 1e-9, half_len - 1e-9, 360)
+                theta = elem.theta
+                x_test = elem.x + s * cos(theta)
+                y_test = elem.y + s * sin(theta)
+            else:
+                continue
+    
+            # compute absolute error
+            Err = [abs(self.calc_c(x, y)) for x, y in zip(x_test, y_test)]
+    
+            plt.plot(
+                phi,
+                Err,
+                linestyle=styles[idx % len(styles)],
+                linewidth=2,
+                label=f'Element {idx + 1}'
+            )
+    
+        plt.xlim([0, 2 * pi])
+        plt.xlabel('Angle (°)')
+        plt.ylabel('Absolute error [mg/l]')
+        plt.xticks(
+            np.linspace(0, 2 * pi, 13),
+            np.linspace(0, 360, 13).astype(int)
+        )
+        plt.legend(loc='best')
+        plt.tight_layout()
+    
+        error_filename = os.path.join(
+            results_dir,
+            f"run_{self.run_index:04d}_error_{filename_suffix}.pdf"
+        )
+        plt.savefig(error_filename)
+        print(f"Error plot saved to: {error_filename}")
 
     def plot_result(self):
         inc = self.config.dom_inc

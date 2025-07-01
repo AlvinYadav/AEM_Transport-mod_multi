@@ -22,12 +22,7 @@ class ATElement:
 
     def calc_d_q(self, alpha_t, alpha_l, beta):
         r = self.r
-        if self.kind == ATElementType.Circle:
-            a = self.r
-        elif self.kind == ATElementType.Line:
-            a = self.r/2.0
-        else:
-            raise ValueError(f"Unknown AT element type: {self.kind}")
+        a = self.r
         self.d = math.sqrt((a * math.sqrt(alpha_l / alpha_t))**2 - a**2)
         self.q = (self.d ** 2 * beta ** 2) / 4
         self.m = Mathieu(self.q)
@@ -42,7 +37,7 @@ class ATElement:
             ]
 
         elif self.kind == ATElementType.Line:
-            half_len = self.r / 2.0
+            half_len = self.r
             t_vals = np.linspace(-half_len, half_len, num_cp)
             self.outline = [
                 (self.x + t * math.cos(self.theta),
