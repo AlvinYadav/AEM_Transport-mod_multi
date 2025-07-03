@@ -11,10 +11,9 @@ import numpy as np
 # Local imports:
 from mathieu_functions_OG import Mathieu
 
-
 class ATElementType(Enum):
     """
-    This enum class defines the various elemet types.
+    This enum class defines the various element types.
 
     - Circle: x, y and radius
     - Line: x1, y1 and x2, y2

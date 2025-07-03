@@ -26,8 +26,90 @@ from at_element import ATElement, ATElementType
 
 logger = logging.getLogger(__name__)
 
+from multiprocessing import Pool, cpu_count
+
+_shared_elements = None
+_shared_coeff = None
+_shared_num_terms = None
+_shared_alpha_l = None
+_shared_alpha_t = None
+_shared_beta = None
+_shared_ca = None
+_shared_gamma = None
+
+def _init_pool(elements, coeff, num_terms, alpha_l, alpha_t, beta, ca, gamma):
+    """
+    Initializes shared variables for worker processes in the multiprocessing pool.
+    
+    Parameters
+    ----------
+    elements : list
+        List of ATElement objects.
+    coeff : array_like
+        Flattened coefficient array.
+    num_terms : int
+        Number of Mathieu function terms.
+    alpha_l : float
+        Longitudinal dispersivity.
+    alpha_t : float
+        Transverse dispersivity.
+    beta : float
+        Exponential decay coefficient.
+    ca : float
+        Acceptor concentration threshold.
+    gamma : float
+        Stoichiometric ratio.
+    """
+    global _shared_elements, _shared_coeff, _shared_num_terms
+    global _shared_alpha_l, _shared_alpha_t, _shared_beta, _shared_ca, _shared_gamma
+
+    _shared_elements = elements
+    _shared_coeff = coeff
+    _shared_num_terms = num_terms
+    _shared_alpha_l = alpha_l
+    _shared_alpha_t = alpha_t
+    _shared_beta = beta
+    _shared_ca = ca
+    _shared_gamma = gamma
+
+
+def _compute_point_shared(args):
+    """
+     Computes concentration at a point using shared variables.
+    
+     Parameters
+     ----------
+     args : tuple
+         (x, y) coordinates.
+    
+     Returns
+     -------
+     float
+         Concentration at the given point.
+     """
+    x, y = args
+    return _compute_point((
+        x, y, _shared_elements, _shared_coeff,
+        _shared_num_terms, _shared_alpha_l, _shared_alpha_t,
+        _shared_beta, _shared_ca, _shared_gamma
+    ))
+
 
 def _compute_point(args):
+    """
+    Computes the concentration at a single (x, y) point.
+
+    Parameters
+    ----------
+    args : tuple
+        Contains x, y coordinates and all necessary parameters
+        for evaluating the concentration field.
+
+    Returns
+    -------
+    float
+        Calculated concentration at the point.
+    """
     x, y, elements, coeff, num_terms, alpha_l, alpha_t, beta, ca, gamma = args
     total_terms = 2 * num_terms - 1
 
@@ -65,6 +147,19 @@ def _compute_point(args):
 
 
 def create_mirrored_element(elem):
+    """
+    Creates a mirrored image of an ATElement across the x-axis.
+    
+    Parameters
+    ----------
+    elem : ATElement
+        Original element to be mirrored.
+    
+    Returns
+    -------
+    ATElement
+        Mirrored element with flipped y and concentration.
+    """
     return ATElement(
         kind=elem.kind,
         x=elem.x,
@@ -226,30 +321,45 @@ class ATSimulation:
             return total - self.config.ca
 
     def conc_array(self, xmin: float, ymin: float, xmax: float, ymax: float, inc: float):
-        self.xaxis = np.arange(xmin, xmax+inc, inc)
-        self.yaxis = np.arange(ymin, ymax+inc, inc)
+        """
+        Parallel computation of concentration over the domain grid
+
+        Parameters
+        ----------
+        xmin : float
+            Minimum x-coordinate of the domain
+        ymin : float
+            Minimum y-coordinate of the domain
+        xmax : float
+            Maximum x-coordinate of the domain
+        ymax : float
+            Maximum y-coordinate of the domain
+        inc : float
+            Grid Spacing
+        """
+        self.xaxis = np.arange(xmin, xmax + inc, inc)
+        self.yaxis = np.arange(ymin, ymax + inc, inc)
 
         xs, ys = np.meshgrid(self.xaxis, self.yaxis)
-        tasks = [
-            (
-                float(x), float(y),
-                self.config.elements,
-                self.coeff,
-                self.config.num_terms,
-                self.config.alpha_l,
-                self.config.alpha_t,
-                self.config.beta,
-                self.config.ca,
-                self.config.gamma
-            )
-            for x, y in zip(xs.ravel(), ys.ravel())
-        ]
+        coords = list(zip(xs.ravel(), ys.ravel()))
 
-        with ProcessPoolExecutor() as executor:
-            flat = list(executor.map(_compute_point, tasks))
-
+        pool_args = (
+            self.config.elements,
+            self.coeff,
+            self.config.num_terms,
+            self.config.alpha_l,
+            self.config.alpha_t,
+            self.config.beta,
+            self.config.ca,
+            self.config.gamma
+        )
+    
+        with Pool(processes=cpu_count(), initializer=_init_pool, initargs=pool_args) as pool:
+            flat = pool.map(_compute_point_shared, coords)
+    
         self.result = np.array(flat).reshape(xs.shape)
         self.result_tuple = (self.xaxis, self.yaxis, self.result)
+
 
     def generate_filename_suffix(self) -> str:
         n_elements: int = len(self.config.elements)
