@@ -371,7 +371,7 @@ class ATSimulation:
                 y_test = elem.y + (elem.r + 1e-9) * np.sin(phi)
 
             elif elem.kind == ATElementType.Line:
-                half_len:float = elem.r / 2
+                half_len:float = elem.r
                 s = np.linspace(-half_len + 1e-9, half_len - 1e-9, 360)
                 theta: float = elem.theta
                 x_test = elem.x + s * cos(theta)
@@ -446,21 +446,8 @@ class ATSimulation:
 
         styles = ['-', '--', ':', '-.']
         for idx, elem in enumerate(self.config.elements):
-            # generate the same sampling for each element
-            if elem.kind == ATElementType.Circle:
-                x_test = elem.x + (elem.r + 1e-9) * np.cos(phi)
-                y_test = elem.y + (elem.r + 1e-9) * np.sin(phi)
-            elif elem.kind == ATElementType.Line:
-                half_len = elem.r / 2
-                s = np.linspace(-half_len + 1e-9, half_len - 1e-9, 360)
-                theta = elem.theta
-                x_test = elem.x + s * cos(theta)
-                y_test = elem.y + s * sin(theta)
-            else:
-                continue
-
             # compute absolute error
-            Err = [abs(self.calc_c(x, y)) for x, y in zip(x_test, y_test)]
+            Err: list = [abs(self.calc_c(x, y)) for x, y in zip(x_test, y_test)]
 
             plt.plot(
                 phi,
