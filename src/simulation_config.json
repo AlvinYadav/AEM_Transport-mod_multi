@@ -4,9 +4,9 @@
     "ca": 8.0,
     "gamma": 3.5,
     "dom_xmin": 0.0,
-    "dom_xmax": 100.0,
-    "dom_ymin": -10.0,
-    "dom_ymax": 10.0,
+    "dom_xmax": 50.0,
+    "dom_ymin": -1.1,
+    "dom_ymax": 1.1,
     "dom_inc": 0.5,
     "num_cp": 100,
     "num_terms": 7,
@@ -14,11 +14,11 @@
     "plot_aspect":"scaled",
     "elements": [
         {
-            "kind": "circle",
+            "kind": "line",
             "x": 10,
             "y": 0,
             "c": 5,
-            "r": 1.0,
+            "l": 2.0,
             "id": "donor"
         }
     ]
