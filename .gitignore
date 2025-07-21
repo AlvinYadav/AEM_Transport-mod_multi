@@ -170,7 +170,7 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-simulation_config.json
+src/simulation_config.json
 
 #plot results from testing
 Results/
