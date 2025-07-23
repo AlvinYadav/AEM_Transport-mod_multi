@@ -87,8 +87,27 @@ def find_alpha_t(
       1) Bracket with stepping (and early breaks on undershoot or tolerance)
       2) Bisection refinement (with tolerance, undershoot, stagnation)
     """
+    print("="*65)
+    print(f"target_Lmax = {target_Lmax}")
 
     def safe_lmax(a: float):
+        at = a
+        while at <= max_alpha:
+            try:
+                L = compute_lmax_with_sim(
+                    at, r, C0, Ca, gamma,
+                    orientation, target_Lmax=target_Lmax
+                )
+                if L is not None:
+                    print (f"Safe L_max has been found at L, a= {L}, {at}")
+                    return L, at
+            except Exception:
+                pass
+            print(f"Safe L_max has not been found for alpha = {at}")
+            at += 0.01
+        raise RuntimeError(f"Cannot eval L_max for αₜ∈[{a}, {max_alpha}]")
+
+    def calc_lmax(a: float):
         at = a
         while at <= max_alpha:
             try:
@@ -100,33 +119,32 @@ def find_alpha_t(
                     return L, at
             except Exception:
                 pass
-            at += step
+            at += 0.01
         raise RuntimeError(f"Cannot eval L_max for αₜ∈[{a}, {max_alpha}]")
 
     # ─── 1) Bracket phase ────────────────────────────────────────────────
-    L_lo, α_lo = safe_lmax(alpha_start)
+    L_lo, a_lo = safe_lmax(alpha_start)
     # early break on starting value
     if L_lo < target_Lmax or abs(L_lo - target_Lmax) <= tolerance:
-        return α_lo, L_lo
+        print("Tolerance Break or Undershoot Break")
+        return a_lo, L_lo
 
-    α_hi = α_lo + step
-    while α_hi <= max_alpha:
-        L_hi, α_hi = safe_lmax(α_hi)
-
-        # early undershoot break
-        if L_hi < target_Lmax:
-            return α_hi, L_hi
+    a_hi = a_lo + step
+    while a_hi <= max_alpha:
+        L_hi, a_hi = calc_lmax(a_hi)
 
         # early tolerance break
         if abs(L_hi - target_Lmax) <= tolerance:
-            return α_hi, L_hi
+            print(f"Tolerance Break")
+            return a_hi, L_hi
 
         # classic bracket check
         if (L_lo - target_Lmax) * (L_hi - target_Lmax) <= 0:
+            print(f"Bracket found between {a_lo} and {a_hi}.")
             break
 
-        L_lo, α_lo = L_hi, α_hi
-        α_hi += step
+        L_lo, a_lo = L_hi, a_hi
+        a_hi += step
     else:
         raise RuntimeError(
             f"Failed to bracket target {target_Lmax:.6f} in αₜ∈[{alpha_start}, {max_alpha}]"
@@ -137,23 +155,18 @@ def find_alpha_t(
     stagnate = 0
 
     while True:
-        α_mid = 0.5 * (α_lo + α_hi)
-        if α_mid > max_alpha:
+        a_mid = 0.5 * (a_lo + a_hi)
+        if a_mid > max_alpha:
             raise RuntimeError(f"αₜ exceeded max_alpha={max_alpha}")
 
-        L_mid, α_mid = safe_lmax(α_mid)
+        L_mid, a_mid = calc_lmax(a_mid)
         diff = L_mid - target_Lmax
-        print(f"[dbg] α_mid={α_mid:.6f}, L_mid={L_mid:.6f}, diff={diff:.6f}")
+        print(f"[dbg] α_mid={a_mid:.6f}, L_mid={L_mid:.6f}, diff={diff:.6f}")
 
         # tolerance break
         if abs(diff) <= tolerance:
             print(f"[break] within tolerance |{L_mid}-{target_Lmax}|={abs(diff):.6f} ≤ {tolerance}")
-            return α_mid, L_mid
-
-        # undershoot break
-        if diff < 0:
-            print(f"[break] undershoot L_mid={L_mid:.6f} < target={target_Lmax:.6f}")
-            return α_mid, L_mid
+            return a_mid, L_mid
 
         # stagnation break
         if prev_L is not None and abs(L_mid - prev_L) < tolerance:
@@ -169,9 +182,9 @@ def find_alpha_t(
 
         # narrow bracket
         if (L_lo - target_Lmax) * (L_mid - target_Lmax) <= 0:
-            α_hi, L_hi = α_mid, L_mid
+            a_hi, L_hi = a_mid, L_mid
         else:
-            α_lo, L_lo = α_mid, L_mid
+            a_lo, L_lo = a_mid, L_mid
 
 
 def process_input_file(
