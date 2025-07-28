@@ -10,13 +10,13 @@ from at_simulation import ATSimulation
 from at_findalpha_t import process_input_file
 
 # Choose mode: "simulate" to run transport sim, "findalpha" to run alpha-finder
-MODE = "findalpha"  # "simulate" or "findalpha"
+MODE = "simulate"  # "simulate" or "findalpha"
 
 # When MODE == "simulate":
 CONFIG_PATH = "simulation_config.json"
 
 # When MODE == "findalpha":
-INPUT_FILE       = "input_values_O2.txt"
+INPUT_FILE       = "input_values.txt"
 OUTPUT_FILE      = "output_results.txt"
 ORIENTATION      = "vertical"        # "horizontal" or "vertical"
 ALPHA_START      = 0.0001
@@ -61,7 +61,6 @@ def main():
 
     if MODE == "simulate":
         result = run_simulation()
-        # You can add code here to handle or display 'result'
         print("Simulation completed. Result tuple returned.")
     elif MODE == "findalpha":
         run_findalpha()
