@@ -10,19 +10,19 @@ from at_simulation import ATSimulation
 from at_findalpha_t import process_input_file
 
 # Choose mode: "simulate" to run transport sim, "findalpha" to run alpha-finder
-MODE = "simulate"  # "simulate" or "findalpha"
+MODE = "findalpha"  # "simulate" or "findalpha"
 
 # When MODE == "simulate":
 CONFIG_PATH = "simulation_config.json"
 
 # When MODE == "findalpha":
 INPUT_FILE       = "input_values.txt"
-OUTPUT_FILE      = "output_results.txt"
+OUTPUT_FILE      = "output_values.txt"
 ORIENTATION      = "vertical"        # "horizontal" or "vertical"
-ALPHA_START      = 0.0001
-STEP             = 0.02
+ALPHA_START      = 0.00001
+STEP             = 0.0001
 TOLERANCE        = 10.0
-MAX_ALPHA        = 0.21
+MAX_ALPHA        = 0.2
 MAX_STAGNATION   = 5
 
 def setup_logging():
@@ -64,7 +64,7 @@ def main():
         print("Simulation completed. Result tuple returned.")
     elif MODE == "findalpha":
         run_findalpha()
-        print(f"Alpha-finder completed. Results in '{OUTPUT_FILE}'.")
+        print(f"Inverse Dispersivity Finder completed. Results in '{OUTPUT_FILE}'.")
     else:
         raise ValueError(f"Unknown MODE '{MODE}'. Use 'simulate' or 'findalpha'.")
 
