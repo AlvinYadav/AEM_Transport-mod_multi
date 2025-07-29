@@ -25,6 +25,8 @@ TOLERANCE        = 10.0
 MAX_ALPHA        = 0.2
 MAX_STAGNATION   = 5
 
+result = None
+
 def setup_logging():
     log_file = "aem_transport_simulation.log"
     log_format = "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
@@ -38,9 +40,9 @@ def run_simulation():
     config = ATConfiguration.from_json(CONFIG_PATH)
     sim = ATSimulation(config)
     sim.run()
+
     # Return or process sim.result_tuple as needed
     return sim.result_tuple
-
 
 def run_findalpha():
     # Run the alpha-finder in batch mode
@@ -57,6 +59,7 @@ def run_findalpha():
 
 
 def main():
+    global result
     setup_logging()
 
     if MODE == "simulate":
