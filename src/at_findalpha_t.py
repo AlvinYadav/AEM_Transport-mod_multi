@@ -158,9 +158,10 @@ def process_input_file(
                 max_alpha,
                 max_stagnation
             )
+            warning = " [WARNING: αₜ > 0.1]" if α > 0.1 else ""
             results.append(
                 f"Line {i}: r={r}, C0={C0}, Ca={Ca}, γ={gamma}, "
-                f"target={target} → αₜ={α:.6f}, Lmax={L:.6f}"
+                f"target={target} → αₜ={α:.6f}, Lmax={L:.6f}{warning}"
             )
         except Exception as e:
             print(f"  [ERROR] {e}")
