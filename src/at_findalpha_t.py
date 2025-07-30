@@ -9,8 +9,7 @@ from at_config import ATConfiguration
 from at_element import ATElement, ATElementType
 from at_simulation import ATSimulation, create_mirrored_element
 
-
-def compute_lmax(alpha, r, C0, Ca, gamma, orientation, target_Lmax):
+def compute_lmax(alpha, r, C0, Ca, gamma, orientation, elem_kind, target_Lmax):
     cfg = ATConfiguration.from_json("simulation_config.json")
     cfg.alpha_t = alpha
     cfg.ca = Ca
@@ -21,13 +20,21 @@ def compute_lmax(alpha, r, C0, Ca, gamma, orientation, target_Lmax):
         cfg.dom_xmax = max(cfg.dom_xmax, target_Lmax * 1.1)
 
     if orientation == "vertical":
-        base = ATElement(ATElementType.Circle, x=0.0, y=-(r + 0.1), c=C0, r=r)
+        if elem_kind =="Circle":
+            base = ATElement(ATElementType.Circle, x=0.0, y=-(r + 0.1), c=C0, r=r)
+        elif elem_kind =="Line":
+            base = ATElement(ATElementType.Line, x=0.0, y=-(r + 0.1), c=C0, r=r)
+        else:
+            raise ValueError(f"Unknown element type: {elem_kind}")
         img = create_mirrored_element(base)
         img.id = f"image_{base.id}"
         cfg.elements = [base, img]
         cfg.dom_ymax = 0.0
     else:
-        base = ATElement(ATElementType.Circle, x=0.0, y=0.0, c=C0, r=r)
+        if elem_kind == "Circle":
+            base = ATElement(ATElementType.Circle, x=0.0, y=0.0, c=C0, r=r)
+        else:
+            base = ATElement(ATElementType.Line, x=0.0, y=0.0, c=C0, r=r)
         cfg.elements = [base]
 
     for e in cfg.elements:
@@ -79,6 +86,7 @@ def save_statistics(sim, line_index, statsfile):
 def find_alpha(
     radius, C0, Ca, gamma, target_Lmax,
     orientation="horizontal",
+    elem_kind = "Circle",
     alpha_start=0.02,
     step=0.001,
     tolerance=1e-3,
@@ -91,7 +99,7 @@ def find_alpha(
         count = 0
         while at <= max_alpha:
             try:
-                L, sim = compute_lmax(at, radius, C0, Ca, gamma, orientation, target_Lmax)
+                L, sim = compute_lmax(at, radius, C0, Ca, gamma, orientation, elem_kind, target_Lmax)
                 if L is not None:
                     return L, sim
             except Exception:
@@ -100,6 +108,7 @@ def find_alpha(
             count +=1
             if count > 5:
                 multiplier *= 5
+                count = 0
         raise RuntimeError(f"Cannot compute L at αₜ ∈ {a, max_alpha}")
 
     L_lo, sim = eval_L(alpha_start)
@@ -150,6 +159,7 @@ def process_input_file(
     output_file,
     statsfile,
     orientation="horizontal",
+    elem_kind="Circle",
     source_thickness_modifier = 1.0,
     alpha_start: float=0.02,
     step: float=0.001,
@@ -169,6 +179,7 @@ def process_input_file(
             α, L, sim = find_alpha(
                 r*source_thickness_modifier, C0, Ca, gamma, target,
                 orientation,
+                elem_kind,
                 alpha_start,
                 step,
                 tolerance,

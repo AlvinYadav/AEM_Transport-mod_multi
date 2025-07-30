@@ -20,6 +20,7 @@ INPUT_FILE       = "input_values.txt"
 OUTPUT_FILE      = "output_values.txt"
 STATS_FILE       = "stats_values.txt"
 ORIENTATION      = "vertical"   # "horizontal" or "vertical"
+ELEM_KIND        = "Circle"       #Circle or Line
 SOURCE_THICKNESS_MODIFIER = 0.25   # set between 0.0 and 1.0 to determine what percentage of
                                    # aquifer thickness is radius of source thickness
 ALPHA_START      = 0.0001
@@ -54,6 +55,7 @@ def run_findalpha():
         OUTPUT_FILE,
         STATS_FILE,
         ORIENTATION,
+        ELEM_KIND,
         SOURCE_THICKNESS_MODIFIER,
         ALPHA_START,
         STEP,
