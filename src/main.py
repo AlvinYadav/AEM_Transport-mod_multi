@@ -18,8 +18,11 @@ CONFIG_PATH = "simulation_config.json"
 # When MODE == "findalpha":
 INPUT_FILE       = "input_values.txt"
 OUTPUT_FILE      = "output_values.txt"
-ORIENTATION      = "vertical"        # "horizontal" or "vertical"
-ALPHA_START      = 0.00001
+STATS_FILE       = "stats_values.txt"
+ORIENTATION      = "vertical"   # "horizontal" or "vertical"
+SOURCE_THICKNESS_MODIFIER = 0.25   # set between 0.0 and 1.0 to determine what percentage of
+                                   # aquifer thickness is radius of source thickness
+ALPHA_START      = 0.0001
 STEP             = 0.0001
 TOLERANCE        = 10.0
 MAX_ALPHA        = 0.2
@@ -49,7 +52,9 @@ def run_findalpha():
     process_input_file(
         INPUT_FILE,
         OUTPUT_FILE,
+        STATS_FILE,
         ORIENTATION,
+        SOURCE_THICKNESS_MODIFIER,
         ALPHA_START,
         STEP,
         TOLERANCE,
@@ -67,7 +72,7 @@ def main():
         print("Simulation completed. Result tuple returned.")
     elif MODE == "findalpha":
         run_findalpha()
-        print(f"Inverse Dispersivity Finder completed. Results in '{OUTPUT_FILE}'.")
+        print(f"Inverse Dispersivity Finder completed. Results in '{OUTPUT_FILE}'. Element Statistics in '{STATS_FILE}'.")
     else:
         raise ValueError(f"Unknown MODE '{MODE}'. Use 'simulate' or 'findalpha'.")
 
