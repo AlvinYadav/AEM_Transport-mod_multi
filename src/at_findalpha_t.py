@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import sys
 
 import numpy as np
 from math import cos, sin, pi
@@ -8,6 +9,24 @@ import matplotlib.pyplot as plt
 from at_config import ATConfiguration
 from at_element import ATElement, ATElementType
 from at_simulation import ATSimulation, create_mirrored_element
+
+class TeeOutput:
+    """Write to both file and console simultaneously"""
+
+    def __init__(self, file_handle, console_handle):
+        self.file_handle = file_handle
+        self.console_handle = console_handle
+
+    def write(self, text):
+        self.file_handle.write(text)
+        self.console_handle.write(text)
+        self.file_handle.flush()
+        self.console_handle.flush()
+
+    def flush(self):
+        self.file_handle.flush()
+        self.console_handle.flush()
+
 
 def compute_lmax(alpha, r, C0, Ca, gamma, orientation, elem_kind, target_Lmax):
     cfg = ATConfiguration.from_json("simulation_config.json")
@@ -20,9 +39,9 @@ def compute_lmax(alpha, r, C0, Ca, gamma, orientation, elem_kind, target_Lmax):
         cfg.dom_xmax = max(cfg.dom_xmax, target_Lmax * 1.1)
 
     if orientation == "vertical":
-        if elem_kind =="Circle":
+        if elem_kind == "Circle":
             base = ATElement(ATElementType.Circle, x=0.0, y=-(r + 0.1), c=C0, r=r)
-        elif elem_kind =="Line":
+        elif elem_kind == "Line":
             base = ATElement(ATElementType.Line, x=0.0, y=-(r + 0.1), c=C0, r=r)
         else:
             raise ValueError(f"Unknown element type: {elem_kind}")
@@ -84,14 +103,14 @@ def save_statistics(sim, line_index, statsfile):
 
 
 def find_alpha(
-    radius, C0, Ca, gamma, target_Lmax,
-    orientation="horizontal",
-    elem_kind = "Circle",
-    alpha_start=0.02,
-    step=0.001,
-    tolerance=1e-3,
-    max_alpha=0.2,
-    max_stagnation=5
+        radius, C0, Ca, gamma, target_Lmax,
+        orientation="horizontal",
+        elem_kind="Circle",
+        alpha_start=0.02,
+        step=0.001,
+        tolerance=1e-3,
+        max_alpha=0.2,
+        max_stagnation=5
 ):
     def eval_L(a):
         at = a
@@ -105,7 +124,7 @@ def find_alpha(
             except Exception:
                 pass
             at += step * multiplier
-            count +=1
+            count += 1
             if count > 5:
                 multiplier *= 5
                 count = 0
@@ -155,17 +174,17 @@ def find_alpha(
 
 
 def process_input_file(
-    input_file,
-    output_file,
-    statsfile,
-    orientation="horizontal",
-    elem_kind="Circle",
-    source_thickness_modifier = 1.0,
-    alpha_start: float=0.02,
-    step: float=0.001,
-    tolerance: float=1e-3,
-    max_alpha: float=0.2,
-    max_stagnation: int=5
+        input_file,
+        output_file,
+        statsfile,
+        orientation="horizontal",
+        elem_kind="Circle",
+        source_thickness_modifier=1.0,
+        alpha_start: float = 0.02,
+        step: float = 0.001,
+        tolerance: float = 1e-3,
+        max_alpha: float = 0.2,
+        max_stagnation: int = 5
 ):
     open(statsfile, "w").close()
     lines = [ln.split() for ln in open(input_file) if ln.strip()]
@@ -177,7 +196,7 @@ def process_input_file(
         print(f"Processing line {i}: target_Lmax = {target}")
         try:
             α, L, sim = find_alpha(
-                r*source_thickness_modifier, C0, Ca, gamma, target,
+                r * source_thickness_modifier, C0, Ca, gamma, target,
                 orientation,
                 elem_kind,
                 alpha_start,
@@ -189,7 +208,7 @@ def process_input_file(
 
             warning = " [WARNING: αₜ > 0.1]" if α > 0.1 else ""
             results.append(
-                f"Line {i}: aq = {r}, r={r*source_thickness_modifier: .3f}, C0={C0}, Ca={Ca}, γ={gamma}, "
+                f"Line {i}: aq = {r}, r={r * source_thickness_modifier: .3f}, C0={C0}, Ca={Ca}, γ={gamma}, "
                 f"target={target} → αₜ={α:.6f}, Lmax={L:.6f}{warning}"
             )
 
@@ -207,3 +226,97 @@ def process_input_file(
         for line in skipped:
             f.write(line + "\n")
     print(f"Wrote {len(results)} results, {len(skipped)} skipped to '{output_file}'")
+
+
+def process_input_file_with_logging(
+        input_file,
+        output_file,
+        statsfile,
+        orientation="horizontal",
+        elem_kind="Circle",
+        source_thickness_modifier=1.0,
+        alpha_start: float = 0.02,
+        step: float = 0.001,
+        tolerance: float = 1e-3,
+        max_alpha: float = 0.2,
+        max_stagnation: int = 5
+):
+    """Function that logs parameters and outputs per input line interleaved"""
+    import datetime
+    log_file = "findalpha_log.txt"
+
+    with open(log_file, 'a') as f:
+        # Add timestamp header for new run
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        f.write("\n" + "*" * 80 + "\n")
+        f.write(f"NEW RUN STARTED AT: {timestamp}\n")
+        f.write("*" * 80 + "\n")
+        # Write parameters
+        f.write("FINDALPHA MODE PARAMETERS:\n")
+        f.write("=" * 80 + "\n")
+        f.write(f"INPUT_FILE: {input_file}, OUTPUT_FILE: {output_file}, STATSFILE: {statsfile}\n")
+        f.write(f", ORIENTATION: {orientation}, ELEM_KIND: {elem_kind}, SOURCE_THICKNESS_MODIFIER: {source_thickness_modifier}, \n")
+        f.write(f" ALPHA_START: {alpha_start}, STEP: {step}, TOLERANCE: {tolerance}, MAX_ALPHA: {max_alpha}, MAX_STAGNATION: {max_stagnation}\n")
+
+        # Set up tee output to write to both file and console
+        original_stdout = sys.stdout
+        original_stderr = sys.stderr
+
+        try:
+            # Create tee objects
+            tee_stdout = TeeOutput(f, original_stdout)
+            tee_stderr = TeeOutput(f, original_stderr)
+            sys.stdout = tee_stdout
+            sys.stderr = tee_stderr
+
+            # Clear stats file
+            open(statsfile, "w").close()
+            lines = [ln.strip() for ln in open(input_file) if ln.strip()]
+            results, skipped = [], []
+
+            for i, line in enumerate(lines, 1):
+                f.write("=" * 80 + "\n")
+                f.write(f"Input Line {i}: {line}\n")
+                params = list(map(float, line.split()))
+                r, C0, Ca, gamma, target = params
+
+                print("=" * 80)
+                print(f"Processing line {i}: target_Lmax = {target}")
+                try:
+                    α, L, sim = find_alpha(
+                        r * source_thickness_modifier, C0, Ca, gamma, target,
+                        orientation,
+                        elem_kind,
+                        alpha_start,
+                        step,
+                        tolerance,
+                        max_alpha,
+                        max_stagnation
+                    )
+
+                    warning = " [WARNING: αₜ > 0.1]" if α > 0.1 else ""
+                    result = (
+                        f"Line {i}: aq = {r}, r={r * source_thickness_modifier: .3f}, C0={C0}, Ca={Ca}, γ={gamma}, "
+                        f"target={target} → αₜ={α:.6f}, Lmax={L:.6f}{warning}"
+                    )
+                    results.append(result)
+
+                    if sim is not None:
+                        save_statistics(sim, i, statsfile)
+
+                except Exception as e:
+                    err_msg = f"Line {i}: params={params}  ERROR: {e}"
+                    print(f"  [ERROR] {e}")
+                    skipped.append(err_msg)
+
+            with open(output_file, "w") as out_f:
+                for line in results:
+                    out_f.write(line + "\n")
+                out_f.write("\nSkipped Cases:\n")
+                for line in skipped:
+                    out_f.write(line + "\n")
+            print(f"Wrote {len(results)} results, {len(skipped)} skipped to '{output_file}'")
+
+        finally:
+            sys.stdout = original_stdout
+            sys.stderr = original_stderr
