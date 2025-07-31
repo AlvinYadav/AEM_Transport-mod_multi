@@ -8,7 +8,6 @@ from datetime import timedelta
 import logging
 import json
 import os
-from concurrent.futures import ProcessPoolExecutor
 
 # External library:
 import numpy as np
@@ -16,14 +15,13 @@ import matplotlib.pyplot as plt
 import matplotlib.pyplot as plt_temp
 import matplotlib as mpl
 from matplotlib.ticker import MaxNLocator
+from multiprocessing import Pool, cpu_count
 
 # Local imports:
 from at_config import ATConfiguration
 from at_element import ATElement, ATElementType
 
 logger = logging.getLogger(__name__)
-
-from multiprocessing import Pool, cpu_count
 
 _shared_elements = None
 _shared_coeff = None
