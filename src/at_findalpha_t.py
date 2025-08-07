@@ -176,17 +176,17 @@ def find_alpha(
 def process_input_file(
         input_file,
         output_file,
-        statsfile,
-        orientation="horizontal",
-        elem_kind="Circle",
-        source_thickness_modifier=1.0,
+        stats_file,
+        orientation: str ="horizontal",
+        elem_kind: str ="Circle",
+        source_thickness_modifier: float =1.0,
         alpha_start: float = 0.02,
         step: float = 0.001,
         tolerance: float = 1e-3,
         max_alpha: float = 0.2,
         max_stagnation: int = 5
 ):
-    open(statsfile, "w").close()
+    open(stats_file, "w").close()
     lines = [ln.split() for ln in open(input_file) if ln.strip()]
     results, skipped = [], []
 
@@ -213,7 +213,7 @@ def process_input_file(
             )
 
             if sim is not None:
-                save_statistics(sim, i, statsfile)
+                save_statistics(sim, i, stats_file)
 
         except Exception as e:
             print(f"  [ERROR] {e}")
