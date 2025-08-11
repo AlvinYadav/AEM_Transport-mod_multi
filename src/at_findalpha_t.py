@@ -7,7 +7,7 @@ from math import cos, sin, pi
 import matplotlib.pyplot as plt
 
 from at_config import ATConfiguration
-from at_element import ATElement, ATElementType
+from at_element_OG import ATElement, ATElementType
 from at_simulation import ATSimulation, create_mirrored_element
 
 class TeeOutput:
