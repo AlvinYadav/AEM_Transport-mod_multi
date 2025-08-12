@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
 import sys
-
+import datetime
 import numpy as np
 from math import cos, sin, pi
 import matplotlib.pyplot as plt
@@ -9,6 +9,11 @@ import matplotlib.pyplot as plt
 from at_config import ATConfiguration
 from at_element import ATElement, ATElementType
 from at_simulation import ATSimulation, create_mirrored_element
+
+# Define folder path next to script
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FILES_DIR = os.path.join(BASE_DIR, "findalpha_files")
+os.makedirs(FILES_DIR, exist_ok=True)  # Create folder if missing
 
 class TeeOutput:
     """Write to both file and console simultaneously"""
@@ -27,6 +32,12 @@ class TeeOutput:
         self.file_handle.flush()
         self.console_handle.flush()
 
+def _in_files_dir(p: str) -> str:
+    """Put relative filenames inside findalpha_files; keep absolute paths as-is."""
+    if os.path.isabs(p):
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        return p
+    return os.path.join(FILES_DIR, os.path.basename(p))
 
 def compute_lmax(alpha, r, C0, Ca, gamma, orientation, elem_kind, target_Lmax):
     cfg = ATConfiguration.from_json("simulation_config.json")
@@ -172,62 +183,6 @@ def find_alpha(
         else:
             a_hi = a_mid
 
-'''
-def process_input_file(
-        input_file,
-        output_file,
-        stats_file,
-        orientation: str ="horizontal",
-        elem_kind: str ="Circle",
-        source_thickness_modifier: float =1.0,
-        alpha_start: float = 0.02,
-        step: float = 0.001,
-        tolerance: float = 1e-3,
-        max_alpha: float = 0.2,
-        max_stagnation: int = 5
-):
-    open(stats_file, "w").close()
-    lines = [ln.split() for ln in open(input_file) if ln.strip()]
-    results, skipped = [], []
-
-    for i, params in enumerate(lines, 1):
-        r, C0, Ca, gamma, target = map(float, params)
-        print("=" * 65)
-        print(f"Processing line {i}: target_Lmax = {target}")
-        try:
-            α, L, sim = find_alpha(
-                r * source_thickness_modifier, C0, Ca, gamma, target,
-                orientation,
-                elem_kind,
-                alpha_start,
-                step,
-                tolerance,
-                max_alpha,
-                max_stagnation
-            )
-
-            warning = " [WARNING: αₜ > 0.1]" if α > 0.1 else ""
-            results.append(
-                f"Line {i}: aq = {r}, r={r * source_thickness_modifier: .3f}, C0={C0}, Ca={Ca}, γ={gamma}, "
-                f"target={target} → αₜ={α:.6f}, Lmax={L:.6f}{warning}"
-            )
-
-            if sim is not None:
-                save_statistics(sim, i, stats_file)
-
-        except Exception as e:
-            print(f"  [ERROR] {e}")
-            skipped.append(f"Line {i}: params={params}  ERROR: {e}")
-
-    with open(output_file, "w") as f:
-        for line in results:
-            f.write(line + "\n")
-        f.write("\nSkipped Cases:\n")
-        for line in skipped:
-            f.write(line + "\n")
-    print(f"Wrote {len(results)} results, {len(skipped)} skipped to '{output_file}'")
-'''
-
 def process_input_file_with_logging(
         input_file,
         output_file,
@@ -242,8 +197,10 @@ def process_input_file_with_logging(
         max_stagnation: int = 5
 ):
     """Function that logs parameters and outputs per input line interleaved"""
-    import datetime
-    log_file = "findalpha_log.txt"
+    input_file = _in_files_dir(input_file)
+    output_file = _in_files_dir(output_file)
+    statsfile = _in_files_dir(statsfile)
+    log_file = os.path.join(FILES_DIR, "findalpha_log.txt")
 
     with open(log_file, 'a') as f:
         # Add timestamp header for new run
